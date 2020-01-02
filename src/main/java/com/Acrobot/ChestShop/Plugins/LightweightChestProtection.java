@@ -1,5 +1,6 @@
 package com.Acrobot.ChestShop.Plugins;
 
+import com.Acrobot.ChestShop.ChestShop;
 import com.Acrobot.ChestShop.Configuration.Messages;
 import com.Acrobot.ChestShop.Configuration.Properties;
 import com.Acrobot.ChestShop.Events.Protection.ProtectBlockEvent;
@@ -11,7 +12,6 @@ import com.griefcraft.lwc.LWC;
 import com.griefcraft.model.Protection;
 import com.griefcraft.scripting.event.LWCProtectionRegisterEvent;
 import org.bukkit.block.Block;
-import org.bukkit.block.Chest;
 import org.bukkit.block.Container;
 import org.bukkit.block.Sign;
 import org.bukkit.entity.Player;
@@ -36,12 +36,13 @@ public class LightweightChestProtection implements Listener {
         Container connectedContainer = event.getContainer();
 
         if (Properties.PROTECT_SIGN_WITH_LWC) {
-            if (!Security.protect(player, sign.getBlock())) {
+            if (!Security.protect(player, sign.getBlock(), event.getOwnerAccount() != null ? event.getOwnerAccount().getUuid() : player.getUniqueId())) {
                 player.sendMessage(Messages.prefix(Messages.NOT_ENOUGH_PROTECTIONS));
             }
         }
 
-        if (Properties.PROTECT_CHEST_WITH_LWC && connectedContainer != null && Security.protect(player, connectedContainer.getBlock())) {
+        if (Properties.PROTECT_CHEST_WITH_LWC && connectedContainer != null
+                && Security.protect(player, connectedContainer.getBlock(), event.getOwnerAccount() != null ? event.getOwnerAccount().getUuid() : player.getUniqueId())) {
             player.sendMessage(Messages.prefix(Messages.PROTECTED_SHOP));
         }
     }
@@ -99,8 +100,24 @@ public class LightweightChestProtection implements Listener {
             return;
         }
 
-        // TODO: Update to new API once LWC is updated
-        Protection protection = lwc.getPhysicalDatabase().registerProtection(block.getType().getId(), Protection.Type.PRIVATE, worldName, player.getUniqueId().toString(), "", x, y, z);
+        Protection protection = null;
+        try {
+            protection = lwc.getPhysicalDatabase().registerProtection(block.getType(), Protection.Type.PRIVATE, worldName, event.getProtectionOwner().toString(), "", x, y, z);
+        } catch (LinkageError e) {
+            try {
+                int blockId = com.griefcraft.cache.BlockCache.getInstance().getBlockId(block);
+                if (blockId < 0) {
+                    return;
+                }
+                protection = lwc.getPhysicalDatabase().registerProtection(blockId, Protection.Type.PRIVATE, worldName, event.getProtectionOwner().toString(), "", x, y, z);
+            } catch (LinkageError e2) {
+                ChestShop.getBukkitLogger().warning(
+                        "Incompatible LWC version installed! (" + lwc.getPlugin().getName() + " v" + lwc.getVersion()  + ") \n" +
+                                "Material method error: " + e.getMessage() + "\n" +
+                                "Block cache/type id error: " + e2.getMessage()
+                );
+            }
+        }
 
         if (protection != null) {
             event.setProtected(true);
