@@ -10,6 +10,7 @@ import com.Acrobot.ChestShop.Permission;
 import com.Acrobot.ChestShop.UUIDs.NameManager;
 import com.Acrobot.ChestShop.Utils.uBlock;
 import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockState;
 import org.bukkit.block.Chest;
@@ -43,7 +44,7 @@ public class ChestShopSign {
     }
 
     public static boolean isAdminShop(String owner) {
-        return owner.replace(" ", "").equalsIgnoreCase(Properties.ADMIN_SHOP_NAME.replace(" ", ""));
+        return ChatColor.stripColor(owner.replace(" ", "")).equalsIgnoreCase(Properties.ADMIN_SHOP_NAME.replace(" ", ""));
     }
 
     public static boolean isAdminShop(Sign sign) {
@@ -113,7 +114,7 @@ public class ChestShopSign {
         if (player == null) return false;
         if (sign == null) return true;
 
-        String name = sign.getLine(NAME_LINE);
+        String name = ChatColor.stripColor(sign.getLine(NAME_LINE));
         if (name == null || name.isEmpty()) return true;
 
         return NameManager.canUseName(player, base, name);
@@ -136,7 +137,7 @@ public class ChestShopSign {
 
     public static boolean isValidPreparedSign(String[] lines) {
         for (int i = 0; i < 4; i++) {
-            if (!SHOP_SIGN_PATTERN[i].matcher(lines[i]).matches()) {
+            if (!SHOP_SIGN_PATTERN[i].matcher(ChatColor.stripColor(lines[i])).matches()) {
                 return false;
             }
         }

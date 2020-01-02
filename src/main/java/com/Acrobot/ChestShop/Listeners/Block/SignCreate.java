@@ -34,6 +34,10 @@ public class SignCreate implements Listener {
         PreShopCreationEvent preEvent = new PreShopCreationEvent(event.getPlayer(), (Sign) signBlock.getState(), line);
         ChestShop.callEvent(preEvent);
 
+        preEvent.setSignLine((byte)0, "§1" + preEvent.getSignLine((byte)0));
+        preEvent.setSignLine((byte)2, preEvent.getSignLine((byte)2).replace("B", "§aB").replace("S", "§4S").replace(":", "§0:"));
+        preEvent.setSignLine((byte)3, "§9" + preEvent.getSignLine((byte)3));
+
         for (byte i = 0; i < event.getLines().length; ++i) {
             event.setLine(i, preEvent.getSignLine(i));
         }

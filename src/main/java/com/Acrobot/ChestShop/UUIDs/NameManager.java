@@ -14,6 +14,7 @@ import com.j256.ormlite.dao.Dao;
 
 import org.apache.commons.lang.Validate;
 import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -98,7 +99,8 @@ public class NameManager implements Listener {
      * @return The account info or <tt>null</tt> if none was found
      * @throws IllegalArgumentException if the username is empty or null
      */
-    public static Account getAccount(String fullName) {
+    public static Account getAccount(String _fullName) {
+        String fullName = ChatColor.stripColor(_fullName);
         Validate.notEmpty(fullName, "fullName cannot be null or empty!");
         try {
             return usernameToAccount.get(fullName, () -> {
@@ -139,8 +141,8 @@ public class NameManager implements Listener {
         return getAccountFromShortName(shortName, true);
     }
 
-    private static Account getAccountFromShortName(String shortName, boolean searchOfflinePlayer) {
-
+    private static Account getAccountFromShortName(String _shortName, boolean searchOfflinePlayer) {
+        String shortName = ChatColor.stripColor(_shortName);
         Validate.notEmpty(shortName, "shortName cannot be null or empty!");
         Account account = null;
 
@@ -201,7 +203,8 @@ public class NameManager implements Listener {
      * @deprecated Use {@link NameManager#getAccount(String)}
      */
     @Deprecated
-    public static UUID getUUID(String username) {
+    public static UUID getUUID(String _username) {
+        String username = ChatColor.stripColor(_username);
         Validate.notEmpty(username, "username cannot be null or empty!");
         Player player = Bukkit.getPlayer(username);
         if (player != null) {
@@ -251,7 +254,8 @@ public class NameManager implements Listener {
      * @deprecated Use {@link NameManager#getAccountFromShortName(String)}
      */
     @Deprecated
-    public static String getFullUsername(String shortName) {
+    public static String getFullUsername(String _shortName) {
+        String shortName = ChatColor.stripColor(_shortName);
         AccountQueryEvent accountQueryEvent = new AccountQueryEvent(shortName);
         Bukkit.getPluginManager().callEvent(accountQueryEvent);
         Account account = accountQueryEvent.getAccount();

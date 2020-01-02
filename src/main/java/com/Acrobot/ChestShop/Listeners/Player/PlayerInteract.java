@@ -149,10 +149,10 @@ public class PlayerInteract implements Listener {
     }
 
     private static PreTransactionEvent preparePreTransactionEvent(Sign sign, Player player, Action action) {
-        String name = sign.getLine(NAME_LINE);
-        String quantity = sign.getLine(QUANTITY_LINE);
-        String prices = sign.getLine(PRICE_LINE);
-        String material = sign.getLine(ITEM_LINE);
+        String name = ChatColor.stripColor(sign.getLine(NAME_LINE));
+        String quantity = ChatColor.stripColor(sign.getLine(QUANTITY_LINE));
+        String prices = ChatColor.stripColor(sign.getLine(PRICE_LINE));
+        String material = ChatColor.stripColor(sign.getLine(ITEM_LINE));
 
         AccountQueryEvent accountQueryEvent = new AccountQueryEvent(name);
         Bukkit.getPluginManager().callEvent(accountQueryEvent);
