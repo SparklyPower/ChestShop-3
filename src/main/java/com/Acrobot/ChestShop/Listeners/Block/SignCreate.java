@@ -3,7 +3,6 @@ package com.Acrobot.ChestShop.Listeners.Block;
 import com.Acrobot.Breeze.Utils.BlockUtil;
 import com.Acrobot.Breeze.Utils.StringUtil;
 import com.Acrobot.ChestShop.ChestShop;
-import com.Acrobot.ChestShop.Events.AccountQueryEvent;
 import com.Acrobot.ChestShop.Events.PreShopCreationEvent;
 import com.Acrobot.ChestShop.Events.ShopCreatedEvent;
 import com.Acrobot.ChestShop.Signs.ChestShopSign;
@@ -48,12 +47,25 @@ public class SignCreate implements Listener {
         PreShopCreationEvent preEvent = new PreShopCreationEvent(event.getPlayer(), sign, lines);
         ChestShop.callEvent(preEvent);
 
-        preEvent.setSignLine((byte)0, "§1" + preEvent.getSignLine((byte)0));
-        preEvent.setSignLine((byte)2, preEvent.getSignLine((byte)2).replace("B", "§aB").replace("S", "§4S").replace(":", "§0:"));
-        preEvent.setSignLine((byte)3, "§9" + preEvent.getSignLine((byte)3));
+        if (preEvent.getOutcome().shouldBreakSign()) {
+            signBlock.breakNaturally();
+            return;
+        }
 
-        for (byte i = 0; i < event.getLines().length; ++i) {
-            event.setLine(i, preEvent.getSignLine(i));
+        for (byte i = 0; i < preEvent.getSignLines().length && i < 4; ++i) {
+            String line = preEvent.getSignLine(i);
+
+            if (i == (byte) 0) {
+                line = "§1" + line;
+            }
+            if (i == (byte) 2) {
+                line = line.replace("B", "§aB").replace("S", "§4S").replace(":", "§0:");
+            }
+            if (i == (byte) 3) {
+                line = "§9" + line;
+            }
+
+            event.setLine(i, line);
         }
 
         if (preEvent.isCancelled()) {

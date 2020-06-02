@@ -9,6 +9,12 @@ import com.Acrobot.Breeze.Configuration.Configuration;
 public class Messages {
     public static String prefix = "&a[Shop] &r";
     public static String iteminfo = "&aItem Information: &r";
+    public static String iteminfo_fullname = "&fFull Name: &7%item";
+    public static String iteminfo_shopname = "&fShop Sign: &7%item";
+    public static String iteminfo_repaircost = "&fRepair Cost: &7%cost";
+    public static String iteminfo_book = "&fBook Title: &7%title\n&fBook Author: &7%author\n&fBook Pages: &7%pages";
+    public static String iteminfo_book_generatopm = "&fBook Generation: &7%generation";
+    public static String iteminfo_lore = "&fLore: \n&r%lore";
 
     @PrecededBySpace
     public static String ACCESS_DENIED = "You don't have permission to access that shop's storage container!";
@@ -48,6 +54,8 @@ public class Messages {
     public static String YOU_CANNOT_CREATE_SHOP = "You can't create this type of shop!";
     public static String NO_CHEST_DETECTED = "Couldn't find a chest!";
     public static String INVALID_SHOP_DETECTED = "The shop cannot be used!";
+    public static String INVALID_SHOP_PRICE = "The shop has an invalid price!";
+    public static String INVALID_SHOP_QUANTITY = "The shop has an invalid quantity!";
     public static String CANNOT_ACCESS_THE_CHEST = "You don't have permissions to access this chest!";
 
     @PrecededBySpace
@@ -90,5 +98,12 @@ public class Messages {
 
     public static String prefix(String message) {
         return Configuration.getColoured(prefix + message);
+    }
+
+    public static String replace(String message, String... replacements) {
+        for (int i = 0; i + 1 < replacements.length; i+=2) {
+            message = message.replace("%" + replacements[i], replacements[i+1]);
+        }
+        return Configuration.getColoured(message);
     }
 }

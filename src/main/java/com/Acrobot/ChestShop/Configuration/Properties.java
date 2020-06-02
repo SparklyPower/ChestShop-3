@@ -16,6 +16,7 @@ import java.util.EnumSet;
 import java.util.LinkedHashSet;
 import java.util.Locale;
 import java.util.Set;
+import java.util.UUID;
 import java.util.logging.Level;
 
 /**
@@ -75,8 +76,29 @@ public class Properties {
                 return object;
             }
         });
+        Configuration.registerParser("UUID", new ValueParser() {
+            @Override
+            public String parseToYAML(Object object) {
+                if (object instanceof UUID) {
+                    return object.toString();
+                }
+                return super.parseToYAML(object);
+            }
+
+            @Override
+            public <T> Object parseToJava(Class<T> type, Object object) {
+                if (object instanceof String) {
+                    return UUID.fromString((String) object);
+                }
+                return object;
+            }
+        });
     }
 
+    @ConfigurationComment("Should the plugin log some messages that are useful for debugging?")
+    public static boolean DEBUG = false;
+
+    @PrecededBySpace
     @ConfigurationComment("Do you want to turn off the automatic updates of ChestShop?")
     public static boolean TURN_OFF_UPDATES = false;
 
@@ -108,6 +130,9 @@ public class Properties {
     @ConfigurationComment("If true, people will be able to buy/sell in 64 stacks while holding the crouch button.")
     public static boolean SHIFT_SELLS_IN_STACKS = false;
 
+    @ConfigurationComment("If true, people will be able to sell/buy everything available of the same type.")
+    public static boolean SHIFT_SELLS_EVERYTHING = false;
+
     @ConfigurationComment("What can you do by clicking shift with SHIFT_SELLS_IN_STACKS turned on? (ALL/BUY/SELL)")
     public static String SHIFT_ALLOWS = "ALL";
 
@@ -132,8 +157,11 @@ public class Properties {
     @ConfigurationComment("First line of your Admin Shop's sign should look like this:")
     public static String ADMIN_SHOP_NAME = "Admin Shop";
 
-    @ConfigurationComment("The economy account which Admin Shops should use and to which all taxes will go")
+    @ConfigurationComment("The name of the economy account which Admin Shops should use and to which all taxes will go")
     public static String SERVER_ECONOMY_ACCOUNT = "";
+
+    @ConfigurationComment("The uuid of the economy account for the Admin Shop. Useful for fake accounts as normally only accounts of players work")
+    public static UUID SERVER_ECONOMY_ACCOUNT_UUID = new UUID(0, 0);
 
     @ConfigurationComment("Percent of the price that should go to the server's account. (100 = 100 percent)")
     public static int TAX_AMOUNT = 0;
@@ -153,6 +181,10 @@ public class Properties {
     @PrecededBySpace
     @ConfigurationComment("Should we block shops that sell things for more than they buy? (This prevents newbies from creating shops that would be exploited)")
     public static boolean BLOCK_SHOPS_WITH_SELL_PRICE_HIGHER_THAN_BUY_PRICE = true;
+
+    @PrecededBySpace
+    @ConfigurationComment("Maximum amount of items that can be bought/sold at a shop. Default 3456 is a double chest of 64 stacks.")
+    public static int MAX_SHOP_AMOUNT = 3456;
 
     @PrecededBySpace
     @ConfigurationComment("Do you want to allow other players to build a shop on a block where there's one already?")
@@ -231,6 +263,9 @@ public class Properties {
 
     @ConfigurationComment("Should the chest's LWC protection be removed once the shop sign is destroyed? ")
     public static boolean REMOVE_LWC_PROTECTION_AUTOMATICALLY = true;
+
+    @ConfigurationComment("Should LWC limits block shop creations?")
+    public static boolean LWC_LIMITS_BLOCK_CREATION = true;
 
     @PrecededBySpace
     @ConfigurationComment("Do you want to only let people build inside WorldGuard regions?")

@@ -153,8 +153,8 @@ public class ChestShop extends JavaPlugin {
     }
 
     public void loadConfig() {
-        Configuration.pairFileAndClass(loadFile("config.yml"), Properties.class);
-        Configuration.pairFileAndClass(loadFile("local.yml"), Messages.class);
+        Configuration.pairFileAndClass(loadFile("config.yml"), Properties.class, getBukkitLogger());
+        Configuration.pairFileAndClass(loadFile("local.yml"), Messages.class, getBukkitLogger());
 
         NameManager.load();
 
@@ -400,7 +400,7 @@ public class ChestShop extends JavaPlugin {
         } catch (IOException ex) {
             ChestShop.getBukkitLogger().severe("There was an error while submitting MCStats statistics.");
         }
-        new org.bstats.bukkit.MetricsLite(this);
+        new org.bstats.bukkit.MetricsLite(this, 1109);
     }
 
     private static final int PROJECT_BUKKITDEV_ID = 31263;
