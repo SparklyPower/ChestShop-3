@@ -2,14 +2,16 @@ package com.Acrobot.Breeze.Utils;
 
 import com.Acrobot.Breeze.Collection.SimpleCache;
 import com.Acrobot.ChestShop.ChestShop;
+import com.Acrobot.ChestShop.Configuration.Messages;
 import com.Acrobot.ChestShop.Configuration.Properties;
-import com.Acrobot.ChestShop.Events.ItemParseEvent;
 import com.Acrobot.ChestShop.Events.MaterialParseEvent;
-import com.google.common.collect.ImmutableMap;
+import com.Acrobot.ChestShop.Utils.ItemUtil;
 import de.themoep.ShowItem.api.ShowItem;
-import info.somethingodd.OddItem.OddItem;
+import de.themoep.minedown.adventure.Replacer;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.TextComponent;
+import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer;
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.configuration.file.YamlConstructor;
 import org.bukkit.configuration.file.YamlRepresenter;
@@ -18,20 +20,19 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.Damageable;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.plugin.Plugin;
-import org.json.simple.JSONObject;
 import org.yaml.snakeyaml.DumperOptions;
 import org.yaml.snakeyaml.Yaml;
 import org.yaml.snakeyaml.nodes.Tag;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 import static com.Acrobot.Breeze.Utils.StringUtil.getMinecraftCharWidth;
 import static com.Acrobot.Breeze.Utils.StringUtil.getMinecraftStringWidth;
@@ -101,24 +102,41 @@ public class MaterialUtil {
         if (!one.hasItemMeta() && !two.hasItemMeta()) {
             return true;
         }
-        Map<String, Object> oneSerMeta = one.getItemMeta().serialize();
-        Map<String, Object> twoSerMeta = two.getItemMeta().serialize();
+        ItemMeta oneMeta = one.getItemMeta();
+        ItemMeta twoMeta = two.getItemMeta();
+        // return true if both are null or same, false if only one is null
+        if (oneMeta == twoMeta || oneMeta == null || twoMeta == null) {
+            return oneMeta == twoMeta;
+        }
+        Map<String, Object> oneSerMeta = oneMeta.serialize();
+        Map<String, Object> twoSerMeta = twoMeta.serialize();
         if (oneSerMeta.equals(twoSerMeta)) {
             return true;
         }
 
         // Try to use same parsing as the YAML dumper in the ItemDatabase when generating the code as the last resort
         ItemStack oneDumped = YAML.loadAs(YAML.dump(one), ItemStack.class);
-        if (oneDumped.isSimilar(two) || oneDumped.getItemMeta().serialize().equals(twoSerMeta)) {
+        if (oneDumped.isSimilar(two)) {
+            return true;
+        }
+
+        ItemMeta oneDumpedMeta = oneDumped.getItemMeta();
+        if (oneDumpedMeta != null && oneDumpedMeta.serialize().equals(twoSerMeta)) {
             return true;
         }
 
         ItemStack twoDumped = YAML.loadAs(YAML.dump(two), ItemStack.class);
-        if (oneDumped.isSimilar(twoDumped) || oneDumped.getItemMeta().serialize().equals(twoDumped.getItemMeta().serialize())) {
+        if (oneDumped.isSimilar(twoDumped)) {
             return true;
         }
 
-        return false;
+        ItemMeta twoDumpedMeta = twoDumped.getItemMeta();
+        if (oneDumpedMeta != null && twoDumpedMeta != null && oneDumpedMeta.serialize().equals(twoDumpedMeta.serialize())) {
+            return true;
+        }
+
+        // return true if both are null or same, false otherwise
+        return oneDumpedMeta == twoDumpedMeta;
     }
 
     /**
@@ -128,7 +146,7 @@ public class MaterialUtil {
      * @return Material found
      */
     public static Material getMaterial(String name) {
-        String formatted = name.replaceAll("([a-z])([A-Z1-9])", "$1_$2").replace(' ', '_').toUpperCase(Locale.ROOT);
+        String formatted = name.replaceAll("(?<!^)([A-Z1-9])", "_$1").replace(' ', '_').toUpperCase(Locale.ROOT);
 
         Material material = MATERIAL_CACHE.get(formatted);
         if (material != null) {
@@ -155,7 +173,9 @@ public class MaterialUtil {
      *
      * @param items The items to get the information from
      * @return The list, including the amount and names of the items
+     * @deprecated Use {@link ItemUtil#getItemList(ItemStack[])} instead!
      */
+    @Deprecated
     public static String getItemList(ItemStack[] items) {
         ItemStack[] mergedItems = InventoryUtil.mergeSimilarStacks(items);
 
@@ -170,6 +190,7 @@ public class MaterialUtil {
 
     /**
      * Returns item's name
+     * Use {@link ItemUtil#getName(ItemStack, int)} if you want to get name aliases too!
      *
      * @param itemStack ItemStack to name
      * @return ItemStack's name
@@ -193,6 +214,7 @@ public class MaterialUtil {
 
     /**
      * Returns item's name, just like on the sign
+     * Use {@link ItemUtil#getSignName(ItemStack)} if you want to get name aliases too!
      *
      * @param itemStack ItemStack to name
      * @return ItemStack's name
@@ -202,15 +224,15 @@ public class MaterialUtil {
     }
 
     /**
-     * Returns item's name, with a maximum width
+     * Returns item's name, with a maximum width.
+     * Use {@link ItemUtil#getName(ItemStack, int)} if you want to get name aliases too!
      *
      * @param itemStack ItemStack to name
      * @param maxWidth The max width that the name should have; 0 or below if it should be unlimited
      * @return ItemStack's name
      */
     public static String getName(ItemStack itemStack, int maxWidth) {
-        String alias = Odd.getAlias(itemStack);
-        String itemName = alias != null ? alias : itemStack.getType().toString();
+        String itemName = itemStack.getType().toString();
 
         String durability = "";
         if (itemStack.getDurability() != 0) {
@@ -223,23 +245,15 @@ public class MaterialUtil {
         }
 
         String code = StringUtil.capitalizeFirstLetter(itemName, '_');
-        int codeWidth = getMinecraftStringWidth(code + durability + metaData);
-        if (maxWidth > 0 && codeWidth > maxWidth) {
-            int exceeding = codeWidth - maxWidth;
-            code = getShortenedName(code, getMinecraftStringWidth(code) - exceeding);
+        if (maxWidth > 0) {
+            int codeWidth = getMinecraftStringWidth(code + durability + metaData);
+            if (codeWidth > maxWidth) {
+                int exceeding = codeWidth - maxWidth;
+                code = getShortenedName(code, getMinecraftStringWidth(code) - exceeding);
+            }
         }
 
-        code += durability + metaData;
-
-        ItemParseEvent parseEvent = new ItemParseEvent(code);
-        Bukkit.getPluginManager().callEvent(parseEvent);
-        ItemStack codeItem = parseEvent.getItem();
-        if (!equals(itemStack, codeItem)) {
-            throw new IllegalArgumentException("Cannot generate code for item " + itemStack + " with maximum length of " + maxWidth
-                    + " (code " + code + " results in item " + codeItem + ")");
-        }
-
-        return code;
+        return code + durability + metaData;
     }
 
     /**
@@ -255,7 +269,7 @@ public class MaterialUtil {
         if (width <= maxWidth) {
             return itemName;
         }
-        String[] itemParts = itemName.split(" ");
+        String[] itemParts = itemName.split("[ \\-]");
         itemName = String.join("", itemParts);
         width = getMinecraftStringWidth(itemName);
         if (width <= maxWidth) {
@@ -318,12 +332,6 @@ public class MaterialUtil {
      * @return ItemStack
      */
     public static ItemStack getItem(String itemName) {
-        ItemStack itemStack = Odd.getFromString(itemName);
-
-        if (itemStack != null) {
-            return itemStack;
-        }
-
         String[] split = itemName.split("[:\\-#]");
         for (int i = 0; i < split.length; i++) {
             split[i] = split[i].trim();
@@ -337,7 +345,7 @@ public class MaterialUtil {
             return null;
         }
 
-        itemStack = new ItemStack(material);
+        ItemStack itemStack = new ItemStack(material);
 
         ItemMeta meta = getMetadata(itemName);
 
@@ -398,7 +406,7 @@ public class MaterialUtil {
                 return E.valueOf(values[0].getDeclaringClass(), name.toUpperCase(Locale.ROOT));
             } catch (IllegalArgumentException exception) {
                 E currentEnum = null;
-                String[] typeParts = name.replaceAll("([a-z])([A-Z1-9])", "$1_$2").toUpperCase(Locale.ROOT).split("[ _]");
+                String[] typeParts = name.replaceAll("(?<!^)([A-Z1-9])", "_$1").toUpperCase(Locale.ROOT).split("[ _]");
                 int length = Short.MAX_VALUE;
                 for (E e : values) {
                     String enumName = e.name();
@@ -455,52 +463,6 @@ public class MaterialUtil {
         }
     }
 
-    public static class Odd {
-        private static boolean isInitialized = false;
-
-        /**
-         * Returns the item stack from OddItem plugin
-         *
-         * @param itemName Item name to parse
-         * @return itemStack that was parsed
-         */
-        public static ItemStack getFromString(String itemName) {
-            if (!isInitialized) {
-                return null;
-            }
-
-            String name = itemName.replace(':', ';');
-
-            try {
-                return OddItem.getItemStack(name);
-            } catch (Exception ex) {
-                return null;
-            }
-        }
-
-        public static String getAlias(ItemStack itemStack) {
-            if (!isInitialized) {
-                return null;
-            }
-
-            try {
-                Collection<String> aliases = OddItem.getAliases(itemStack);
-                if (!aliases.isEmpty()) {
-                    return aliases.iterator().next();
-                }
-            } catch (Exception ignored) {
-            }
-            return null;
-        }
-
-        /**
-         * Lets the class know that it's safe to use the OddItem methods now
-         */
-        public static void initialize() {
-            isInitialized = true;
-        }
-    }
-
     public static class Show {
         private static ShowItem showItem = null;
 
@@ -520,40 +482,61 @@ public class MaterialUtil {
          * @param message The raw message
          * @param stock   The items in stock
          */
-        public static boolean sendMessage(Player player, String message, ItemStack[] stock) {
+        public static boolean sendMessage(Player player, Messages.Message message, ItemStack[] stock, Map<String, String> replacementMap, String... replacements) {
+            return sendMessage(player, player.getName(), message, stock, replacementMap, replacements);
+        }
+
+        /**
+         * Send a message with hover info and icons
+         *
+         * @param player        The player to send the message to
+         * @param playerName    The name of the player in case he is offline and bungee messages are enabled
+         * @param message       The raw message
+         * @param stock         The items in stock
+         */
+        public static boolean sendMessage(Player player, String playerName, Messages.Message message, ItemStack[] stock, Map<String, String> replacementMap, String... replacements) {
+            return sendMessage(player, playerName, message, true, stock, replacementMap, replacements);
+        }
+
+        /**
+         * Send a message with hover info and icons
+         *
+         * @param player        The player to send the message to
+         * @param playerName    The name of the player in case he is offline and bungee messages are enabled
+         * @param message       The raw message
+         * @param showPrefix    If the prefix should show
+         * @param stock         The items in stock
+         */
+        public static boolean sendMessage(Player player, String playerName, Messages.Message message, boolean showPrefix, ItemStack[] stock, Map<String, String> replacementMap, String... replacements) {
             if (showItem == null) {
                 return false;
             }
 
-            List<String> itemJson = new ArrayList<>();
+            TextComponent.Builder itemComponent = Component.text();
             for (ItemStack item : InventoryUtil.mergeSimilarStacks(stock)) {
                 try {
-                    itemJson.add(showItem.getItemConverter().createComponent(item, Level.FINE).toJsonString(player));
+                    itemComponent.append(GsonComponentSerializer.gson().deserialize(showItem.getItemConverter().createComponent(item, Level.FINE).toJsonString(player)));
                 } catch (Exception e) {
                     ChestShop.getPlugin().getLogger().log(Level.WARNING, "Error while trying to send message '" + message + "' to player " + player.getName() + ": " + e.getMessage());
                     return false;
                 }
             }
 
-            String joinedItemJson = itemJson.stream().collect(Collectors.joining("," + new JSONObject(ImmutableMap.of("text", " ")).toJSONString() + ", "));
-
-            String prevColor = "";
-            List<String> parts = new ArrayList<>();
-            for (String s : message.split("%item")) {
-                parts.add(new JSONObject(ImmutableMap.of("text", prevColor + s)).toJSONString());
-                prevColor = ChatColor.getLastColors(s);
+            Map<String, String> newMap = new LinkedHashMap<>(replacementMap);
+            newMap.put("material", "item");
+            newMap.remove("item");
+            Component component = new Replacer()
+                    .placeholderSuffix("")
+                    .replace("item",itemComponent.build())
+                    .replaceIn(message.getComponent(player, showPrefix, newMap, replacements));
+            if (player != null) {
+                ChestShop.getAudiences().player(player).sendMessage(component);
+                return true;
+            } else if (playerName != null) {
+                ChestShop.sendBungeeMessage(playerName, component);
+                return true;
             }
 
-            String messageJsonString = String.join("," + joinedItemJson + ",", parts);
-
-            while (messageJsonString.startsWith(",")) {
-                messageJsonString = messageJsonString.substring(1);
-            }
-            while (messageJsonString.endsWith(",")) {
-                messageJsonString = messageJsonString.substring(0, messageJsonString.length() - 1);
-            }
-
-            showItem.tellRaw(player, messageJsonString);
             return true;
         }
     }

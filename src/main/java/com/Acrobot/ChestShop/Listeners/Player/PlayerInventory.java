@@ -1,17 +1,27 @@
 package com.Acrobot.ChestShop.Listeners.Player;
 
+import com.Acrobot.ChestShop.ChestShop;
 import com.Acrobot.ChestShop.Configuration.Messages;
 import com.Acrobot.ChestShop.Configuration.Properties;
+import com.Acrobot.ChestShop.Events.ShopInfoEvent;
+import com.Acrobot.ChestShop.Permission;
 import com.Acrobot.ChestShop.Security;
 import com.Acrobot.ChestShop.Signs.ChestShopSign;
+import com.Acrobot.ChestShop.Utils.uBlock;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockState;
 import org.bukkit.block.DoubleChest;
+import org.bukkit.block.Sign;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryOpenEvent;
 import org.bukkit.inventory.InventoryHolder;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import static com.Acrobot.Breeze.Utils.ImplementationAdapter.getHolder;
 
 /**
  * @author Acrobot
@@ -27,26 +37,43 @@ public class PlayerInventory implements Listener {
             return;
         }
 
-        InventoryHolder holder = event.getInventory().getHolder();
-        if (!(holder instanceof BlockState)) {
+        InventoryHolder holder = getHolder(event.getInventory(), false);
+        if (!(holder instanceof BlockState) && !(holder instanceof DoubleChest)) {
             return;
         }
 
         Player player = (Player) event.getPlayer();
-        Block container;
+        List<Block> containers = new ArrayList<>();
 
         if (holder instanceof DoubleChest) {
-            container = ((DoubleChest) holder).getLocation().getBlock();
+            containers.add(((BlockState) ((DoubleChest) holder).getLeftSide()).getBlock());
+            containers.add(((BlockState) ((DoubleChest) holder).getRightSide()).getBlock());
         } else {
-            container = ((BlockState) holder).getBlock();
+            containers.add(((BlockState) holder).getBlock());
         }
 
-        if (!ChestShopSign.isShopBlock(container)) {
-            return;
+        boolean canAccess = false;
+        for (Block container : containers) {
+            if (ChestShopSign.isShopBlock(container)) {
+                if (Security.canView(player, container, false)) {
+                    canAccess = true;
+                }
+            } else {
+                canAccess = true;
+            }
         }
 
-        if (!Security.canAccess(player, container)) {
-            player.sendMessage(Messages.prefix(Messages.ACCESS_DENIED));
+        if (!canAccess) {
+            if (Permission.has(player, Permission.SHOPINFO)) {
+                for (Block container : containers) {
+                    Sign sign = uBlock.getConnectedSign(container);
+                    if (sign != null) {
+                        ChestShop.callEvent(new ShopInfoEvent((Player) event.getPlayer(), sign));
+                    }
+                }
+            } else {
+                Messages.ACCESS_DENIED.sendWithPrefix(event.getPlayer());
+            }
             event.setCancelled(true);
         }
     }

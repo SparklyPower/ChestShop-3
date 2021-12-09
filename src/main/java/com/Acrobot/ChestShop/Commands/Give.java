@@ -5,7 +5,7 @@ import com.Acrobot.Breeze.Utils.MaterialUtil;
 import com.Acrobot.Breeze.Utils.NumberUtil;
 import com.Acrobot.ChestShop.Configuration.Messages;
 import com.Acrobot.ChestShop.Events.ItemParseEvent;
-import com.Acrobot.ChestShop.Permission;
+import com.Acrobot.ChestShop.Utils.ItemUtil;
 import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -13,8 +13,9 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
-import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * @author Acrobot
@@ -30,7 +31,7 @@ public class Give implements CommandExecutor {
         Player receiver = (sender instanceof Player ? (Player) sender : null);
         int quantity = 1;
 
-        List<Integer> disregardedIndexes = new ArrayList<Integer>();
+        Set<Integer> disregardedIndexes = new HashSet<>();
 
         if (args.length > 1) {
             for (int index = args.length - 1; index >= 0; --index) {
@@ -46,7 +47,7 @@ public class Give implements CommandExecutor {
             }
 
             for (int index = args.length - 1; index >= 0; --index) {
-                if (!NumberUtil.isInteger(args[index]) || Integer.parseInt(args[index]) < 0) {
+                if (disregardedIndexes.contains(index) || !NumberUtil.isInteger(args[index]) || Integer.parseInt(args[index]) < 0) {
                     continue;
                 }
 
@@ -58,28 +59,26 @@ public class Give implements CommandExecutor {
         }
 
         if (receiver == null) {
-            sender.sendMessage(Messages.prefix(Messages.PLAYER_NOT_FOUND));
+            Messages.PLAYER_NOT_FOUND.sendWithPrefix(sender);
             return true;
         }
 
         ItemStack item = getItem(args, disregardedIndexes);
 
         if (MaterialUtil.isEmpty(item)) {
-            sender.sendMessage(Messages.prefix(Messages.INCORRECT_ITEM_ID));
+            Messages.INCORRECT_ITEM_ID.sendWithPrefix(sender);
             return true;
         }
 
         item.setAmount(quantity);
         InventoryUtil.add(item, receiver.getInventory());
 
-        sender.sendMessage(Messages.prefix(Messages.ITEM_GIVEN
-                .replace("%item", MaterialUtil.getName(item))
-                .replace("%player", receiver.getName())));
+        Messages.ITEM_GIVEN.send(sender, "item", ItemUtil.getName(item), "player", receiver.getName());
 
         return true;
     }
 
-    private static ItemStack getItem(String[] arguments, List<Integer> disregardedElements) {
+    private static ItemStack getItem(String[] arguments, Set<Integer> disregardedElements) {
         StringBuilder builder = new StringBuilder(arguments.length * 5);
 
         for (int index = 0; index < arguments.length; ++index) {

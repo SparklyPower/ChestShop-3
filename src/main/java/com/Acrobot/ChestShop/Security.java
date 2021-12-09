@@ -17,6 +17,8 @@ import org.bukkit.event.Event;
 
 import java.util.UUID;
 
+import static com.Acrobot.Breeze.Utils.ImplementationAdapter.getState;
+
 /**
  * @author Acrobot
  */
@@ -45,6 +47,13 @@ public class Security {
 
     public static boolean canAccess(Player player, Block block, boolean ignoreDefaultProtection) {
         ProtectionCheckEvent event = new ProtectionCheckEvent(block, player, ignoreDefaultProtection);
+        ChestShop.callEvent(event);
+
+        return event.getResult() != Event.Result.DENY;
+    }
+
+    public static boolean canView(Player player, Block block, boolean ignoreDefaultProtection) {
+        ProtectionCheckEvent event = new ProtectionCheckEvent(block, player, ignoreDefaultProtection, false);
         ChestShop.callEvent(event);
 
         return event.getResult() != Event.Result.DENY;
@@ -83,7 +92,7 @@ public class Security {
                 continue;
             }
 
-            Sign sign = (Sign) block.getState();
+            Sign sign = (Sign) getState(block, false);
 
             if (!ChestShopSign.isValid(sign) || !BlockUtil.getAttachedBlock(sign).equals(baseBlock)) {
                 continue;

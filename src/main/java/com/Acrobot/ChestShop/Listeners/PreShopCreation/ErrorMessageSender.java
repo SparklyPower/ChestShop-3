@@ -17,7 +17,7 @@ public class ErrorMessageSender implements Listener {
             return;
         }
 
-        String message = null;
+        Messages.Message message = null;
 
         switch (event.getOutcome()) {
             case UNKNOWN_PLAYER:
@@ -33,19 +33,7 @@ public class ErrorMessageSender implements Listener {
                 message = Messages.INVALID_SHOP_QUANTITY;
                 break;
             case SELL_PRICE_HIGHER_THAN_BUY_PRICE:
-                message = Messages.YOU_CANNOT_CREATE_SHOP;
-                break;
-            case SELL_PRICE_ABOVE_MAX:
-                message = Messages.SELL_PRICE_ABOVE_MAX;
-                break;
-            case SELL_PRICE_BELOW_MIN:
-                message = Messages.SELL_PRICE_BELOW_MIN;
-                break;
-            case BUY_PRICE_ABOVE_MAX:
-                message = Messages.BUY_PRICE_ABOVE_MAX;
-                break;
-            case BUY_PRICE_BELOW_MIN:
-                message = Messages.BUY_PRICE_BELOW_MIN;
+                message = Messages.SELL_PRICE_HIGHER_THAN_BUY_PRICE;
                 break;
             case NO_CHEST:
                 message = Messages.NO_CHEST_DETECTED;
@@ -62,12 +50,15 @@ public class ErrorMessageSender implements Listener {
             case NOT_ENOUGH_MONEY:
                 message = Messages.NOT_ENOUGH_MONEY;
                 break;
+            case ITEM_AUTOFILL:
+                message = Messages.CLICK_TO_AUTOFILL_ITEM;
+                break;
             default:
                 break;
         }
 
         if (message != null) {
-            event.getPlayer().sendMessage(Messages.prefix(message));
+            message.sendWithPrefix(event.getPlayer());
         }
     }
 }

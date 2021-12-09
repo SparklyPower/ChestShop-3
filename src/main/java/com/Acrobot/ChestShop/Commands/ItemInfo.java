@@ -4,22 +4,25 @@ import com.Acrobot.Breeze.Utils.MaterialUtil;
 import com.Acrobot.Breeze.Utils.StringUtil;
 import com.Acrobot.ChestShop.ChestShop;
 import com.Acrobot.ChestShop.Configuration.Messages;
+import com.Acrobot.ChestShop.Configuration.Properties;
 import com.Acrobot.ChestShop.Events.ItemInfoEvent;
 import com.Acrobot.ChestShop.Events.ItemParseEvent;
+import com.Acrobot.ChestShop.Utils.ItemUtil;
+import com.google.common.collect.ImmutableMap;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.HumanEntity;
+import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
+import java.util.Map;
 import java.util.logging.Level;
 
 import static com.Acrobot.ChestShop.Configuration.Messages.iteminfo;
-import static com.Acrobot.ChestShop.Configuration.Messages.iteminfo_fullname;
 import static com.Acrobot.ChestShop.Configuration.Messages.iteminfo_shopname;
-import static com.Acrobot.ChestShop.Configuration.Messages.replace;
 
 /**
  * @author Acrobot
@@ -44,9 +47,13 @@ public class ItemInfo implements CommandExecutor {
             return false;
         }
 
-        sender.sendMessage(replace(iteminfo));
+        iteminfo.send(sender);
         try {
-            sender.sendMessage(replace(iteminfo_fullname, "item", MaterialUtil.getName(item)));
+            Map<String, String> replacementMap = ImmutableMap.of("item", ItemUtil.getName(item));
+            if (!Properties.SHOWITEM_MESSAGE || !(sender instanceof Player)
+                    || !MaterialUtil.Show.sendMessage((Player) sender, sender.getName(), Messages.iteminfo_fullname, false, new ItemStack[]{item}, replacementMap)) {
+                Messages.iteminfo_fullname.send(sender, replacementMap);
+            }
         } catch (IllegalArgumentException e) {
             sender.sendMessage(ChatColor.RED + "Error while generating full name. Please contact an admin or take a look at the console/log!");
             ChestShop.getPlugin().getLogger().log(Level.SEVERE, "Error while generating full item name", e);
@@ -54,7 +61,7 @@ public class ItemInfo implements CommandExecutor {
         }
 
         try {
-            sender.sendMessage(replace(iteminfo_shopname, "item", MaterialUtil.getSignName(item)));
+            iteminfo_shopname.send(sender, "item", ItemUtil.getSignName(item));
         } catch (IllegalArgumentException e) {
             sender.sendMessage(ChatColor.RED + "Error while generating shop sign name. Please contact an admin or take a look at the console/log!");
             ChestShop.getPlugin().getLogger().log(Level.SEVERE, "Error while generating shop sign item name", e);

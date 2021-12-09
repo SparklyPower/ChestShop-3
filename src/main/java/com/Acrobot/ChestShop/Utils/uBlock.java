@@ -9,10 +9,16 @@ import org.bukkit.block.BlockFace;
 import org.bukkit.block.BlockState;
 import org.bukkit.block.Container;
 import org.bukkit.block.Sign;
+import org.bukkit.block.DoubleChest;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.block.data.type.Chest;
 import org.bukkit.block.data.type.WallSign;
 import org.bukkit.inventory.InventoryHolder;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import static com.Acrobot.Breeze.Utils.ImplementationAdapter.getState;
 
 /**
  * @author Acrobot
@@ -45,6 +51,9 @@ public class uBlock {
      */
     @Deprecated
     public static org.bukkit.block.Chest findConnectedChest(Sign sign) {
+        if (!BlockUtil.isLoaded(sign.getBlock())) {
+            return null;
+        }
         BlockFace signFace = null;
         BlockData data = sign.getBlockData();
         if (data instanceof WallSign) {
@@ -73,6 +82,10 @@ public class uBlock {
      */
     @Deprecated
     private static org.bukkit.block.Chest findConnectedChest(Block block, BlockFace signFace) {
+        if (!BlockUtil.isLoaded(block)) {
+            return null;
+        }
+
         if (signFace != null) {
             Block faceBlock = block.getRelative(signFace);
             if (BlockUtil.isChest(faceBlock)) {
@@ -92,6 +105,10 @@ public class uBlock {
     }
 
     public static Container findConnectedContainer(Sign sign) {
+        if (!BlockUtil.isLoaded(sign.getBlock())) {
+            return null;
+        }
+
         BlockFace signFace = null;
         BlockData data = sign.getBlockData();
         if (data instanceof WallSign) {
@@ -101,6 +118,10 @@ public class uBlock {
     }
 
     public static Container findConnectedContainer(Block block) {
+        if (!BlockUtil.isLoaded(block)) {
+            return null;
+        }
+
         BlockFace signFace = null;
         BlockData data = block.getBlockData();
         if (data instanceof WallSign) {
@@ -128,6 +149,7 @@ public class uBlock {
         return null;
     }
 
+    @Deprecated
     public static Sign findValidShopSign(Block block, String originalName) {
         Sign ownerShopSign = null;
 
@@ -152,15 +174,83 @@ public class uBlock {
         return ownerShopSign;
     }
 
-    public static Sign findAnyNearbyShopSign(Block block) {
+    public static List<Sign> findConnectedShopSigns(InventoryHolder chestShopInventoryHolder) {
+        List<Sign> result = new ArrayList<>();
+
+        if (chestShopInventoryHolder instanceof DoubleChest) {
+            BlockState leftChestSide = (BlockState) ((DoubleChest) chestShopInventoryHolder).getLeftSide();
+            BlockState rightChestSide = (BlockState) ((DoubleChest) chestShopInventoryHolder).getRightSide();
+
+            if (leftChestSide == null || rightChestSide == null) {
+                return result;
+            }
+
+            Block leftChest = leftChestSide.getBlock();
+            Block rightChest = rightChestSide.getBlock();
+
+            if (ChestShopSign.isShopBlock(leftChest)) {
+                result.addAll(uBlock.findConnectedShopSigns(leftChest));
+            }
+
+            if (ChestShopSign.isShopBlock(rightChest)) {
+                result.addAll(uBlock.findConnectedShopSigns(rightChest));
+            }
+        }
+
+        else if (chestShopInventoryHolder instanceof BlockState) {
+            Block chestBlock = ((BlockState) chestShopInventoryHolder).getBlock();
+
+            if (ChestShopSign.isShopBlock(chestBlock)) {
+                result.addAll(uBlock.findConnectedShopSigns(chestBlock));
+            }
+        }
+
+        return result;
+    }
+
+    public static List<Sign> findConnectedShopSigns(Block chestBlock) {
+        List<Sign> result = new ArrayList<>();
+
         for (BlockFace bf : SHOP_FACES) {
-            Block faceBlock = block.getRelative(bf);
+            Block faceBlock = chestBlock.getRelative(bf);
 
             if (!BlockUtil.isSign(faceBlock)) {
                 continue;
             }
 
             Sign sign = (Sign) faceBlock.getState();
+
+            Container signContainer = findConnectedContainer(sign);
+            if (!chestBlock.equals(signContainer.getBlock())) {
+                continue;
+            }
+
+            if (ChestShopSign.isValid(sign)) {
+                result.add(sign);
+            }
+        }
+
+        return result;
+    }
+
+    public static Sign findAnyNearbyShopSign(Block block) {
+        for (BlockFace bf : SHOP_FACES) {
+            Block faceBlock = block.getRelative(bf);
+            if (!BlockUtil.isLoaded(faceBlock)) {
+                continue;
+            }
+
+            BlockData data = faceBlock.getBlockData();
+            if (data instanceof WallSign) {
+                if (((WallSign) data).getFacing() != bf
+                        && couldBeShopContainer(faceBlock.getRelative(((WallSign) data).getFacing().getOppositeFace()))) {
+                    continue;
+                }
+            } else if (!(data instanceof org.bukkit.block.data.type.Sign)) {
+                continue;
+            }
+
+            Sign sign = (Sign) getState(faceBlock, false);
 
             if (ChestShopSign.isValid(sign)) {
                 return sign;
@@ -175,6 +265,10 @@ public class uBlock {
     }
 
     public static Block findNeighbor(Block block) {
+        if (!BlockUtil.isLoaded(block)) {
+            return null;
+        }
+
         BlockData blockData = block.getBlockData();
         if (!(blockData instanceof Chest)) {
             return null;
@@ -203,6 +297,10 @@ public class uBlock {
         }
 
         Block neighborBlock = block.getRelative(chestFace);
+        if (!BlockUtil.isLoaded(neighborBlock)) {
+            return null;
+        }
+
         if (neighborBlock.getType() == block.getType()) {
             return neighborBlock;
         }
@@ -215,7 +313,7 @@ public class uBlock {
     }
 
     public static boolean couldBeShopContainer(Block block) {
-        return block != null && Properties.SHOP_CONTAINERS.contains(block.getType());
+        return block != null && BlockUtil.isLoaded(block) && Properties.SHOP_CONTAINERS.contains(block.getType());
     }
 
     public static boolean couldBeShopContainer(InventoryHolder holder) {

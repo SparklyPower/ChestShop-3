@@ -1,6 +1,7 @@
 package com.Acrobot.ChestShop.Listeners.Player;
 
 import com.Acrobot.Breeze.Utils.*;
+import com.Acrobot.ChestShop.ChestShop;
 import com.Acrobot.ChestShop.Commands.AccessToggle;
 import com.Acrobot.ChestShop.Configuration.Messages;
 import com.Acrobot.ChestShop.Configuration.Properties;
@@ -10,15 +11,16 @@ import com.Acrobot.ChestShop.Events.AccountQueryEvent;
 import com.Acrobot.ChestShop.Events.Economy.AccountCheckEvent;
 import com.Acrobot.ChestShop.Events.ItemParseEvent;
 import com.Acrobot.ChestShop.Events.PreTransactionEvent;
+import com.Acrobot.ChestShop.Events.ShopInfoEvent;
 import com.Acrobot.ChestShop.Events.TransactionEvent;
 import com.Acrobot.ChestShop.Permission;
 import com.Acrobot.ChestShop.Security;
 import com.Acrobot.ChestShop.Signs.ChestShopSign;
+import com.Acrobot.ChestShop.Utils.ItemUtil;
 import com.Acrobot.ChestShop.Utils.uBlock;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.GameMode;
-import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.block.Container;
 import org.bukkit.block.Sign;
@@ -37,12 +39,12 @@ import java.math.MathContext;
 import java.util.Arrays;
 import java.util.logging.Level;
 
+import static com.Acrobot.Breeze.Utils.ImplementationAdapter.getState;
 import static com.Acrobot.Breeze.Utils.BlockUtil.isSign;
 import static com.Acrobot.ChestShop.Events.TransactionEvent.TransactionType;
 import static com.Acrobot.ChestShop.Events.TransactionEvent.TransactionType.BUY;
 import static com.Acrobot.ChestShop.Events.TransactionEvent.TransactionType.SELL;
 import static com.Acrobot.ChestShop.Permission.OTHER_NAME_CREATE;
-import static com.Acrobot.ChestShop.Permission.OTHER_NAME_DESTROY;
 import static com.Acrobot.ChestShop.Signs.ChestShopSign.*;
 import static org.bukkit.event.block.Action.LEFT_CLICK_BLOCK;
 import static org.bukkit.event.block.Action.RIGHT_CLICK_BLOCK;
@@ -61,23 +63,28 @@ public class PlayerInteract implements Listener {
         Action action = event.getAction();
         Player player = event.getPlayer();
 
-        if (Properties.USE_BUILT_IN_PROTECTION && isShopBlock(block)) {
-            if (Properties.TURN_OFF_DEFAULT_PROTECTION_WHEN_PROTECTED_EXTERNALLY) {
+        if (Properties.USE_BUILT_IN_PROTECTION && uBlock.couldBeShopContainer(block)) {
+            Sign sign = uBlock.getConnectedSign(block);
+            if (sign != null) {
+
+                if (!Security.canView(player, block, Properties.TURN_OFF_DEFAULT_PROTECTION_WHEN_PROTECTED_EXTERNALLY)) {
+                    if (Permission.has(player, Permission.SHOPINFO)) {
+                        ChestShop.callEvent(new ShopInfoEvent(player, sign));
+                        event.setCancelled(true);
+                    } else if (!Properties.TURN_OFF_DEFAULT_PROTECTION_WHEN_PROTECTED_EXTERNALLY) {
+                        Messages.ACCESS_DENIED.send(player);
+                        event.setCancelled(true);
+                    }
+                }
+
                 return;
             }
-
-            if (!Security.canAccess(player, block)) {
-                player.sendMessage(Messages.prefix(Messages.ACCESS_DENIED));
-                event.setCancelled(true);
-            }
-
-            return;
         }
 
-        if (!isSign(block) || player.getInventory().getItemInMainHand().getType() == Material.SIGN) // Blocking accidental sign edition
+        if (!isSign(block) || player.getInventory().getItemInMainHand().getType().name().contains("SIGN")) // Blocking accidental sign edition
             return;
 
-        Sign sign = (Sign) block.getState();
+        Sign sign = (Sign) getState(block, false);
         if (!ChestShopSign.isValid(sign)) {
             return;
         }
@@ -88,7 +95,7 @@ public class PlayerInteract implements Listener {
                 if (!MaterialUtil.isEmpty(item)) {
                     String itemCode;
                     try {
-                        itemCode = MaterialUtil.getSignName(item);
+                        itemCode = ItemUtil.getSignName(item);
                     } catch (IllegalArgumentException e) {
                         player.sendMessage(ChatColor.RED + "Error while generating shop sign item name. Please contact an admin or take a look at the console/log!");
                         com.Acrobot.ChestShop.ChestShop.getPlugin().getLogger().log(Level.SEVERE, "Error while generating shop sign item name", e);
@@ -104,21 +111,32 @@ public class PlayerInteract implements Listener {
                             sign.setLine(i, changeEvent.getLine(i));
                         }
                         sign.update();
+                    } else {
+                        event.setCancelled(true);
                     }
                 } else {
-                    player.sendMessage(Messages.prefix(Messages.NO_ITEM_IN_HAND));
+                    Messages.NO_ITEM_IN_HAND.sendWithPrefix(player);
                 }
             } else {
-                player.sendMessage(Messages.prefix(Messages.ACCESS_DENIED));
+                Messages.ACCESS_DENIED.sendWithPrefix(player);
             }
             return;
         }
 
         if (!AccessToggle.isIgnoring(player) && ChestShopSign.canAccess(player, sign) && !ChestShopSign.isAdminShop(sign)) {
             if (Properties.IGNORE_ACCESS_PERMS || ChestShopSign.isOwner(player, sign)) {
+                if ((player.getInventory().getItemInMainHand().getType().name().endsWith("DYE")
+                        || player.getInventory().getItemInMainHand().getType().name().endsWith("INK_SAC"))
+                        && action == RIGHT_CLICK_BLOCK) {
+                    if (Properties.SIGN_DYING) {
+                        return;
+                    } else {
+                        event.setCancelled(true);
+                    }
+                }
                 if (Properties.ALLOW_SIGN_CHEST_OPEN && !(Properties.IGNORE_CREATIVE_MODE && player.getGameMode() == GameMode.CREATIVE)) {
                     if (player.isSneaking() || player.isInsideVehicle()
-                            || (Properties.ALLOW_LEFT_CLICK_DESTROYING && action == LEFT_CLICK_BLOCK && ChestShopSign.hasPermission(player, OTHER_NAME_DESTROY, sign))) {
+                            || (Properties.ALLOW_LEFT_CLICK_DESTROYING && action == LEFT_CLICK_BLOCK)) {
                         return;
                     }
                     event.setCancelled(true);
@@ -126,12 +144,20 @@ public class PlayerInteract implements Listener {
                     return;
                 }
                 // don't allow owners or people with access to buy/sell at this shop
+                Messages.TRADE_DENIED_ACCESS_PERMS.sendWithPrefix(player);
                 return;
             }
         }
 
         if (action == RIGHT_CLICK_BLOCK) {
             event.setCancelled(true);
+        } else if (action == LEFT_CLICK_BLOCK && !Properties.TURN_OFF_SIGN_PROTECTION && !ChestShopSign.canAccess(player, sign)) {
+            event.setCancelled(true);
+        }
+
+        if (Properties.CHECK_ACCESS_FOR_SHOP_USE && !Security.canAccess(player, block, true)) {
+            Messages.TRADE_DENIED.sendWithPrefix(player);
+            return;
         }
 
         //Bukkit.getLogger().info("ChestShop - DEBUG - "+block.getWorld().getName()+": "+block.getLocation().getBlockX()+", "+block.getLocation().getBlockY()+", "+block.getLocation().getBlockZ());
@@ -157,7 +183,7 @@ public class PlayerInteract implements Listener {
         Bukkit.getPluginManager().callEvent(accountQueryEvent);
         Account account = accountQueryEvent.getAccount();
         if (account == null) {
-            player.sendMessage(Messages.prefix(Messages.PLAYER_NOT_FOUND));
+            Messages.PLAYER_NOT_FOUND.sendWithPrefix(player);
             return null;
         }
 
@@ -168,7 +194,7 @@ public class PlayerInteract implements Listener {
             AccountCheckEvent event = new AccountCheckEvent(account.getUuid(), player.getWorld());
             Bukkit.getPluginManager().callEvent(event);
             if(!event.hasAccount()) {
-                player.sendMessage(Messages.prefix(Messages.NO_ECONOMY_ACCOUNT));
+                Messages.NO_ECONOMY_ACCOUNT.sendWithPrefix(player);
                 return null;
             }
         }
@@ -183,17 +209,17 @@ public class PlayerInteract implements Listener {
         Bukkit.getPluginManager().callEvent(parseEvent);
         ItemStack item = parseEvent.getItem();
         if (item == null) {
-            player.sendMessage(Messages.prefix(Messages.INVALID_SHOP_DETECTED));
+            Messages.INVALID_SHOP_DETECTED.sendWithPrefix(player);
             return null;
         }
 
         int amount = -1;
         try {
-            amount = Integer.parseInt(quantity);
+            amount = QuantityUtil.parseQuantity(quantity);
         } catch (NumberFormatException notANumber) {}
 
         if (amount < 1 || amount > Properties.MAX_SHOP_AMOUNT) {
-            player.sendMessage(Messages.prefix(Messages.INVALID_SHOP_PRICE));
+            Messages.INVALID_SHOP_PRICE.sendWithPrefix(player);
             return null;
         }
 
@@ -223,7 +249,11 @@ public class PlayerInteract implements Listener {
 
         ItemStack[] items = InventoryUtil.getItemsStacked(item);
 
-        if (adminShop) {
+        // Create virtual admin inventory if
+        // - it's an admin shop
+        // - there is no container for the shop sign
+        // - the config doesn't force unlimited admin shop stock
+        if (adminShop && (ownerInventory == null || Properties.FORCE_UNLIMITED_ADMIN_SHOP)) {
             ownerInventory = new AdminInventory(action == buy ? Arrays.stream(items).map(ItemStack::clone).toArray(ItemStack[]::new) : new ItemStack[0]);
         }
 
@@ -264,11 +294,15 @@ public class PlayerInteract implements Listener {
         Container container = uBlock.findConnectedContainer(sign);
 
         if (container == null) {
-            player.sendMessage(Messages.prefix(Messages.NO_CHEST_DETECTED));
+            Messages.NO_CHEST_DETECTED.sendWithPrefix(player);
             return;
         }
 
         if (!Security.canAccess(player, signBlock)) {
+            return;
+        }
+        
+        if (!Security.canAccess(player, container.getBlock())) {
             return;
         }
 

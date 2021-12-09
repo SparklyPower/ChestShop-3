@@ -2,6 +2,7 @@ package com.Acrobot.ChestShop.Listeners.Block.Break;
 
 import com.Acrobot.Breeze.Utils.BlockUtil;
 import com.Acrobot.ChestShop.ChestShop;
+import com.Acrobot.ChestShop.Configuration.Messages;
 import com.Acrobot.ChestShop.Configuration.Properties;
 import com.Acrobot.ChestShop.Events.ShopDestroyedEvent;
 import com.Acrobot.ChestShop.Listeners.Block.Break.Attached.PhysicsBreak;
@@ -28,6 +29,7 @@ import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 
+import static com.Acrobot.Breeze.Utils.ImplementationAdapter.getState;
 import static com.Acrobot.Breeze.Utils.BlockUtil.getAttachedBlock;
 import static com.Acrobot.Breeze.Utils.BlockUtil.isSign;
 import static com.Acrobot.ChestShop.Permission.OTHER_NAME_DESTROY;
@@ -55,11 +57,11 @@ public class SignBreak implements Listener {
             return;
         }
 
-        Sign sign = (Sign) block.getState();
+        Sign sign = (Sign) getState(block, false);
         Block attachedBlock = BlockUtil.getAttachedBlock(sign);
 
         if (attachedBlock.getType() == Material.AIR && ChestShopSign.isValid(sign)) {
-            sendShopDestroyedEvent(sign, block.hasMetadata(METADATA_NAME)
+            sendShopDestroyedEvent((Sign) block.getState(), block.hasMetadata(METADATA_NAME)
                     ? (Player) block.getMetadata(METADATA_NAME).get(0).value()
                     : null);
         }
@@ -69,6 +71,7 @@ public class SignBreak implements Listener {
     public static void onSignBreak(BlockBreakEvent event) {
         if (!canBlockBeBroken(event.getBlock(), event.getPlayer())) {
             event.setCancelled(true);
+            Messages.ACCESS_DENIED.sendWithPrefix(event.getPlayer());
             if (isSign(event.getBlock())) {
                 event.getBlock().getState().update();
             }
@@ -165,11 +168,7 @@ public class SignBreak implements Listener {
     }
 
     public static void sendShopDestroyedEvent(Sign sign, Player player) {
-        Container connectedContainer = null;
-
-        if (!ChestShopSign.isAdminShop(sign)) {
-            connectedContainer = uBlock.findConnectedContainer(sign.getBlock());
-        }
+        Container connectedContainer = uBlock.findConnectedContainer(sign.getBlock());
 
         Event event = new ShopDestroyedEvent(player, sign, connectedContainer);
         ChestShop.callEvent(event);

@@ -3,6 +3,7 @@ package com.Acrobot.ChestShop.UUIDs;
 import com.Acrobot.Breeze.Utils.Encoding.Base62;
 import com.Acrobot.Breeze.Utils.NameUtil;
 import com.Acrobot.Breeze.Collection.SimpleCache;
+import com.Acrobot.Breeze.Utils.NumberUtil;
 import com.Acrobot.ChestShop.ChestShop;
 import com.Acrobot.ChestShop.Configuration.Properties;
 import com.Acrobot.ChestShop.Database.Account;
@@ -16,7 +17,6 @@ import com.j256.ormlite.dao.Dao;
 import com.j256.ormlite.stmt.SelectArg;
 import org.apache.commons.lang.Validate;
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -28,8 +28,6 @@ import java.util.Locale;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.logging.Level;
-
-import static com.Acrobot.ChestShop.Permission.OTHER_NAME;
 
 /**
  * Lets you save/cache username and UUID relations
@@ -49,6 +47,14 @@ public class NameManager implements Listener {
     private static Account serverEconomyAccount;
     private static int uuidVersion = -1;
 
+    public static int getAccountCount() {
+        try {
+            return NumberUtil.toInt(accounts.queryBuilder().countOf() - 1);
+        } catch (SQLException e) {
+            return 0;
+        }
+    }
+
     /**
      * Get or create an account for a player
      *
@@ -57,6 +63,10 @@ public class NameManager implements Listener {
      * @throws IllegalArgumentException when an invalid player object was passed
      */
     public static Account getOrCreateAccount(OfflinePlayer player) {
+        Validate.notNull(player.getName(), "Name of player " + player.getUniqueId() + " is null?");
+        Validate.isTrue(!(player instanceof Player) || !Properties.ENSURE_CORRECT_PLAYERID || uuidVersion < 0 || player.getUniqueId().version() == uuidVersion,
+                "Invalid OfflinePlayer! " + player.getUniqueId() + " has version " + player.getUniqueId().version() + " and not server version " + uuidVersion + ". " +
+                        "If you believe that is an error and your setup allows such UUIDs then set the ENSURE_CORRECT_PLAYERID config option to false.");
         return getOrCreateAccount(player.getUniqueId(), player.getName());
     }
 
@@ -71,7 +81,6 @@ public class NameManager implements Listener {
     public static Account getOrCreateAccount(UUID id, String name) {
         Validate.notNull(id, "UUID of player is null?");
         Validate.notNull(name, "Name of player " + id + " is null?");
-        Validate.isTrue(uuidVersion < 0 || id.version() == uuidVersion, "Invalid OfflinePlayer! " + id + " is not of server version " + uuidVersion);
 
         Account account = getAccount(id);
         if (account == null) {
@@ -114,8 +123,7 @@ public class NameManager implements Listener {
      * @return The account info or <tt>null</tt> if none was found
      * @throws IllegalArgumentException if the username is empty or null
      */
-    public static Account getAccount(String _fullName) {
-        String fullName = ChatColor.stripColor(_fullName);
+    public static Account getAccount(String fullName) {
         Validate.notEmpty(fullName, "fullName cannot be null or empty!");
         try {
             return usernameToAccount.get(fullName, () -> {
@@ -139,170 +147,67 @@ public class NameManager implements Listener {
     @EventHandler
     public static void onAccountQuery(AccountQueryEvent event) {
         if (event.getAccount() == null) {
-            event.setAccount(getLastAccountFromShortName(event.getName(), event.searchOfflinePlayers()));
+            event.setAccount(getLastAccountFromName(event.getName(), event.searchOfflinePlayers()));
         }
     }
 
     /**
      * Get account info from a username that might be shortened.
-     * If no account was found it will try to search all known players and create an account.
      *
      * @param shortName The name of the player to get the account info
      * @return The account info or <tt>null</tt> if none was found
      * @throws IllegalArgumentException if the username is empty
      * @deprecated Use the {@link AccountQueryEvent} instead!
      */
+    @Deprecated
     public static Account getAccountFromShortName(String shortName) {
-        return getAccountFromShortName(shortName, true);
-    }
-
-    private static Account getAccountFromShortName(String _shortName, boolean searchOfflinePlayer) {
-        String shortName = ChatColor.stripColor(_shortName);
         Validate.notEmpty(shortName, "shortName cannot be null or empty!");
         Account account = null;
 
-        if (shortName.length() > 15) {
-            account = getAccount(shortName);
-        } else {
-            try {
-                account = shortToAccount.get(shortName, () -> {
-                    try {
-                        Account a = accounts.queryBuilder().where().eq("shortName", new SelectArg(shortName)).queryForFirst();
-                        if (a != null) {
-                            a.setShortName(shortName); // HOW IS IT EVEN POSSIBLE THAT THE NAME IS NOT SET EVEN IF WE HAVE FOUND THE PLAYER?!
-                            return a;
-                        }
-                    } catch (SQLException e) {
-                        ChestShop.getBukkitLogger().log(Level.WARNING, "Error while getting account for " + shortName + ":", e);
+        try {
+            account = shortToAccount.get(shortName, () -> {
+                try {
+                    Account a = accounts.queryBuilder().where().eq("shortName", new SelectArg(shortName)).queryForFirst();
+                    if (a != null) {
+                        a.setShortName(shortName); // HOW IS IT EVEN POSSIBLE THAT THE NAME IS NOT SET EVEN IF WE HAVE FOUND THE PLAYER?!
+                        return a;
                     }
-                    throw new Exception("Could not find account for " + shortName);
-                });
-            } catch (ExecutionException ignored) {}
-        }
-
-        if (account == null && searchOfflinePlayer && !invalidPlayers.contains(shortName.toLowerCase(Locale.ROOT))) {
-            // no account with that shortname was found, try to get an offline player with that name
-            OfflinePlayer offlinePlayer = ChestShop.getBukkitServer().getOfflinePlayer(shortName);
-            if (offlinePlayer != null && offlinePlayer.getName() != null && offlinePlayer.getUniqueId() != null
-                    && offlinePlayer.getUniqueId().version() == uuidVersion) {
-                account = storeUsername(new PlayerDTO(offlinePlayer.getUniqueId(), offlinePlayer.getName()));
-            } else {
-                invalidPlayers.put(shortName.toLowerCase(Locale.ROOT), true);
-            }
-        }
+                } catch (SQLException e) {
+                    ChestShop.getBukkitLogger().log(Level.WARNING, "Error while getting account for " + shortName + ":", e);
+                }
+                throw new Exception("Could not find account for " + shortName);
+            });
+        } catch (ExecutionException ignored) {}
         return account;
     }
 
     /**
-     * Get the information from the last time a player logged in that previously used the shortened name
+     * Get the information from the last time a player logged in that previously used the (shortened) name
      *
-     * @param shortName The name of the player to get the last account for
-     * @return The last account or <tt>null</tt> if none was found
-     * @throws IllegalArgumentException if the username is empty
-     * @deprecated Use the {@link AccountQueryEvent} instead!
-     */
-    @Deprecated
-    public static Account getLastAccountFromShortName(String shortName) {
-        return getLastAccountFromShortName(shortName, true);
-    }
-
-    /**
-     * Get the information from the last time a player logged in that previously used the shortened name
-     *
-     * @param shortName The name of the player to get the last account for
+     * @param name The name of the player to get the last account for
      * @param searchOfflinePlayer Whether or not to search the offline players too
      * @return The last account or <tt>null</tt> if none was found
      * @throws IllegalArgumentException if the username is empty
      */
-    private static Account getLastAccountFromShortName(String shortName, boolean searchOfflinePlayer) {
-        Account account = getAccountFromShortName(shortName, searchOfflinePlayer); // first get the account associated with the short name
+    private static Account getLastAccountFromName(String name, boolean searchOfflinePlayer) {
+        Account account = getAccountFromShortName(name); // first get the account associated with the short name
+        if (account == null) {
+            account = getAccount(name);
+        }
+        if (account == null && searchOfflinePlayer && !invalidPlayers.contains(name.toLowerCase(Locale.ROOT))) {
+            // no account with that shortname was found, try to get an offline player with that name
+            OfflinePlayer offlinePlayer = ChestShop.getBukkitServer().getOfflinePlayer(name);
+            if (offlinePlayer != null && offlinePlayer.getName() != null && offlinePlayer.getUniqueId() != null
+                    && (!Properties.ENSURE_CORRECT_PLAYERID || offlinePlayer.getUniqueId().version() == uuidVersion)) {
+                account = storeUsername(new PlayerDTO(offlinePlayer.getUniqueId(), offlinePlayer.getName()));
+            } else {
+                invalidPlayers.put(name.toLowerCase(Locale.ROOT), true);
+            }
+        }
         if (account != null) {
             return getAccount(account.getUuid()); // then get the last account that was online with that UUID
         }
         return null;
-    }
-
-    /**
-     * Get the UUID from a player's (non-shortened) username
-     *
-     * @param username The player's username
-     * @return The UUID or <tt>null</tt> if the UUID can't be found or an error occurred
-     * @deprecated Use {@link NameManager#getAccount(String)}
-     */
-    @Deprecated
-    public static UUID getUUID(String _username) {
-        String username = ChatColor.stripColor(_username);
-        Validate.notEmpty(username, "username cannot be null or empty!");
-        Player player = Bukkit.getPlayer(username);
-        if (player != null) {
-            return player.getUniqueId();
-        }
-        Account account = getAccount(username);
-        if (account != null) {
-            return account.getUuid();
-        }
-        OfflinePlayer offlinePlayer = Bukkit.getOfflinePlayer(username);
-        if (offlinePlayer != null && offlinePlayer.hasPlayedBefore() && offlinePlayer.getUniqueId() != null) {
-            return offlinePlayer.getUniqueId();
-        }
-        return null;
-    }
-
-    /**
-     * Get the username from a player's UUID
-     *
-     * @param uuid The UUID of the player
-     * @return The username that is stored or <tt>null</tt> if none was found
-     * @deprecated Use {@link NameManager#getAccount(UUID)}
-     */
-    @Deprecated
-    public static String getUsername(UUID uuid) {
-        Player player = Bukkit.getPlayer(uuid);
-        if (player != null) {
-            return player.getName();
-        }
-        Account account = getAccount(uuid);
-        if (account != null) {
-            return account.getName();
-        }
-        OfflinePlayer offlinePlayer = Bukkit.getOfflinePlayer(uuid);
-        if (offlinePlayer != null && offlinePlayer.hasPlayedBefore() && offlinePlayer.getName() != null) {
-            return offlinePlayer.getName();
-        }
-        return null;
-    }
-
-    /**
-     * Get the full username from another username that might be shortened
-     *
-     * @param shortName The name of the player to get the full username for
-     * @return The full username or <tt>null</tt> if none was found
-     * @throws IllegalArgumentException if the username is not a shortened name and longer than 15 chars
-     * @deprecated Use {@link NameManager#getAccountFromShortName(String)}
-     */
-    @Deprecated
-    public static String getFullUsername(String _shortName) {
-        String shortName = ChatColor.stripColor(_shortName);
-        AccountQueryEvent accountQueryEvent = new AccountQueryEvent(shortName);
-        Bukkit.getPluginManager().callEvent(accountQueryEvent);
-        Account account = accountQueryEvent.getAccount();
-        if (account != null) {
-            return account.getName();
-        }
-        return null;
-    }
-
-    /**
-     * Get the short username from a full username
-     *
-     * @param fullName The name of the player to get the short username for
-     * @return The short username or <tt>null</tt> if none was found
-     * @deprecated Use {@link NameManager#getAccount(String)}
-     */
-    @Deprecated
-    public static String getShortUsername(String fullName) {
-        Account account = getAccount(fullName);
-        return account != null ? account.getShortName() : null;
     }
 
     /**
@@ -349,25 +254,17 @@ public class NameManager implements Listener {
     private static String getNewShortenedName(PlayerDTO player) {
         String shortenedName = NameUtil.stripUsername(player.getName());
 
-        Account account = getAccountFromShortName(shortenedName, false);
+        Account account = getAccountFromShortName(shortenedName);
         if (account == null) {
             return shortenedName;
         }
         for (int id = 0; account != null; id++) {
             String baseId = Base62.encode(id);
             shortenedName = NameUtil.stripUsername(player.getName(), 15 - 1 - baseId.length()) + ":" + baseId;
-            account = getAccountFromShortName(shortenedName, false);
+            account = getAccountFromShortName(shortenedName);
         }
 
         return shortenedName;
-    }
-
-    /**
-     * @deprecated Use {@link #canUseName(Player, Permission, String)} to provide specific information about how the player wants to use the name
-     */
-    @Deprecated
-    public static boolean canUseName(Player player, String name) {
-        return canUseName(player, OTHER_NAME, name);
     }
 
     public static boolean canUseName(Player player, Permission base, String name) {
@@ -380,7 +277,6 @@ public class NameManager implements Listener {
         }
 
         AccountQueryEvent queryEvent = new AccountQueryEvent(name);
-        queryEvent.searchOfflinePlayers(false);
         ChestShop.callEvent(queryEvent);
         Account account = queryEvent.getAccount();
         if (account == null) {
@@ -410,8 +306,12 @@ public class NameManager implements Listener {
     }
 
     public static void load() {
-        if (getUuidVersion() < 0 && !Bukkit.getOnlinePlayers().isEmpty()) {
-            setUuidVersion(Bukkit.getOnlinePlayers().iterator().next().getUniqueId().version());
+        if (getUuidVersion() < 0) {
+            if (Bukkit.getOnlineMode()) {
+                setUuidVersion(4);
+            } else if (!Bukkit.getOnlinePlayers().isEmpty()) {
+                setUuidVersion(Bukkit.getOnlinePlayers().iterator().next().getUniqueId().version());
+            }
         }
         try {
             accounts = DaoCreator.getDaoAndCreateTable(Account.class);
@@ -427,7 +327,14 @@ public class NameManager implements Listener {
             }
             if (serverEconomyAccount == null || serverEconomyAccount.getUuid() == null) {
                 serverEconomyAccount = null;
-                ChestShop.getBukkitLogger().log(Level.WARNING, "Server economy account setting '" + Properties.SERVER_ECONOMY_ACCOUNT + "' doesn't seem to be the name of a known player! Please log in at least once in order for the server economy account to work.");
+                if (!Properties.SERVER_ECONOMY_ACCOUNT.isEmpty()) {
+                    ChestShop.getBukkitLogger().log(Level.WARNING, "Server economy account setting '"
+                            + Properties.SERVER_ECONOMY_ACCOUNT
+                            + "' doesn't seem to be the name of a known player account!" +
+                            " Please specify the SERVER_ECONOMY_ACCOUNT_UUID" +
+                            " or log in at least once and create a player shop with that account" +
+                            " in order for the server economy account to work.");
+                }
             }
         } catch (SQLException e) {
             e.printStackTrace();

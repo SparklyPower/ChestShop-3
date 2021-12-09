@@ -2,7 +2,7 @@ package com.Acrobot.ChestShop.Listeners.Modules;
 
 import com.Acrobot.Breeze.Utils.PriceUtil;
 import com.Acrobot.ChestShop.ChestShop;
-import com.Acrobot.ChestShop.Containers.AdminInventory;
+import com.Acrobot.ChestShop.Events.ChestShopReloadEvent;
 import com.Acrobot.ChestShop.Events.PreTransactionEvent;
 import com.Acrobot.ChestShop.Permission;
 import com.Acrobot.ChestShop.UUIDs.NameManager;
@@ -24,10 +24,15 @@ import static com.Acrobot.ChestShop.Signs.ChestShopSign.PRICE_LINE;
  * @author Acrobot
  */
 public class DiscountModule implements Listener {
+    private static final String DISCOUNT_MESSAGE = "Applied a discount of %1$f percent for a resulting price of %2$.2f";
     private YamlConfiguration config;
     private Set<String> groupList = new HashSet<String>();
 
     public DiscountModule() {
+        load();
+    }
+
+    private void load() {
         config = YamlConfiguration.loadConfiguration(ChestShop.loadFile("discounts.yml"));
 
         config.options().header("This file is for discount management. You are able to do that:\n" +
@@ -45,6 +50,11 @@ public class DiscountModule implements Listener {
         groupList = config.getKeys(false);
     }
 
+    @EventHandler
+    public void onReload(ChestShopReloadEvent event) {
+        load();
+    }
+
     @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
     public void onPreTransaction(PreTransactionEvent event) {
         if (event.getTransactionType() != BUY || !NameManager.isAdminShop(event.getOwnerAccount().getUuid())) {
@@ -59,7 +69,10 @@ public class DiscountModule implements Listener {
 
         for (String group : groupList) {
             if (Permission.has(client, Permission.DISCOUNT + group)) {
-                event.setExactPrice(event.getExactPrice().multiply(BigDecimal.valueOf(config.getDouble(group) / 100)));
+                double discount = config.getDouble(group);
+                BigDecimal discountedPrice = event.getExactPrice().multiply(BigDecimal.valueOf(discount / 100));
+                event.setExactPrice(discountedPrice);
+                ChestShop.getBukkitLogger().info(String.format(DISCOUNT_MESSAGE, discount, discountedPrice));
                 return;
             }
         }

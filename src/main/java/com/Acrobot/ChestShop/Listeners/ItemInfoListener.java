@@ -1,7 +1,6 @@
 package com.Acrobot.ChestShop.Listeners;
 
 import com.Acrobot.Breeze.Utils.StringUtil;
-import com.Acrobot.ChestShop.Configuration.Messages;
 import com.Acrobot.ChestShop.Events.ItemInfoEvent;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
@@ -23,10 +22,9 @@ import static com.Acrobot.Breeze.Utils.NumberUtil.toRoman;
 import static com.Acrobot.Breeze.Utils.NumberUtil.toTime;
 import static com.Acrobot.Breeze.Utils.StringUtil.capitalizeFirstLetter;
 import static com.Acrobot.ChestShop.Configuration.Messages.iteminfo_book;
-import static com.Acrobot.ChestShop.Configuration.Messages.iteminfo_book_generatopm;
+import static com.Acrobot.ChestShop.Configuration.Messages.iteminfo_book_generation;
 import static com.Acrobot.ChestShop.Configuration.Messages.iteminfo_lore;
 import static com.Acrobot.ChestShop.Configuration.Messages.iteminfo_repaircost;
-import static com.Acrobot.ChestShop.Configuration.Messages.replace;
 
 /**
  * @author Acrobot
@@ -37,7 +35,7 @@ public class ItemInfoListener implements Listener {
     public static void addRepairCost(ItemInfoEvent event) {
         ItemMeta meta = event.getItem().getItemMeta();
         if (meta instanceof Repairable && ((Repairable) meta).getRepairCost() > 0) {
-            event.getSender().sendMessage(replace(iteminfo_repaircost, "cost", String.valueOf(((Repairable) meta).getRepairCost())));
+            iteminfo_repaircost.send(event.getSender(), "cost", String.valueOf(((Repairable) meta).getRepairCost()));
         }
     }
 
@@ -104,24 +102,26 @@ public class ItemInfoListener implements Listener {
         ItemMeta meta = event.getItem().getItemMeta();
         if (meta instanceof BookMeta) {
             BookMeta book = (BookMeta) meta;
-            event.getSender().sendMessage(replace(iteminfo_book,
+            iteminfo_book.send(event.getSender(),
                     "title", book.getTitle(),
                     "author", book.getAuthor(),
                     "pages", String.valueOf(book.getPageCount())
-            ));
+            );
             if (book.hasGeneration()) {
-                event.getSender().sendMessage(replace(iteminfo_book_generatopm,
+                iteminfo_book_generation.send(event.getSender(),
                         "generation", StringUtil.capitalizeFirstLetter(book.getGeneration().name(), '_')
-                ));
+                );
             }
         }
     }
 
     @EventHandler
     public static void addLoreInfo(ItemInfoEvent event) {
-        ItemMeta meta = event.getItem().getItemMeta();
-        if (meta.hasLore()) {
-            event.getSender().sendMessage(replace(iteminfo_lore, "lore", String.join("\n", meta.getLore())));
+        if (event.getItem().hasItemMeta()) {
+            ItemMeta meta = event.getItem().getItemMeta();
+            if (meta.hasLore()) {
+                iteminfo_lore.send(event.getSender(), "lore", String.join("\n", meta.getLore()));
+            }
         }
     }
 }

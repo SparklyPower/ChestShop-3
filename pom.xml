@@ -6,7 +6,7 @@
 
     <groupId>com.acrobot.chestshop</groupId>
     <artifactId>chestshop</artifactId>
-    <version>3.10.2-SNAPSHOT</version>
+    <version>3.12.1-SNAPSHOT</version>
     <description>Chest-and-sign shop plugin for Bukkit</description>
     <name>ChestShop</name>
 
@@ -53,13 +53,17 @@
             <id>jitpack.io</id>
             <url>https://jitpack.io</url>
         </repository>
+        <repository>
+            <id>NyaaCat</id>
+            <url>https://ci.nyaacat.com/maven/</url>
+        </repository>
     </repositories>
 
     <dependencies>
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
-            <version>4.12</version>
+            <version>4.13.1</version>
             <scope>test</scope>
         </dependency>
 
@@ -68,6 +72,40 @@
             <artifactId>ormlite-jdbc</artifactId>
             <version>5.1</version>
             <scope>compile</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>de.themoep.utils</groupId>
+            <artifactId>lang-bukkit</artifactId>
+            <version>1.3-SNAPSHOT</version>
+            <scope>compile</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>de.themoep</groupId>
+            <artifactId>minedown-adventure</artifactId>
+            <version>1.7.1-SNAPSHOT</version>
+            <scope>compile</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>net.kyori</groupId>
+            <artifactId>adventure-platform-bukkit</artifactId>
+            <version>4.0.1</version>
+            <scope>compile</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>net.kyori</groupId>
+            <artifactId>adventure-text-serializer-gson</artifactId>
+            <version>4.9.1</version>
+            <scope>compile</scope>
+            <exclusions>
+                <exclusion>
+                    <groupId>com.google.code.gson</groupId>
+                    <artifactId>gson</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
         <!-- Should be kept in sync with Mojang -->
@@ -79,25 +117,8 @@
         </dependency>
 
         <dependency>
-            <groupId>org.mcstats.bukkit</groupId>
-            <artifactId>metrics</artifactId>
-            <version>R8-SNAPSHOT</version>
-            <scope>compile</scope>
-            <exclusions>
-                <exclusion>
-                    <groupId>org.bukkit</groupId>
-                    <artifactId>bukkit</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>org.bukkit</groupId>
-                    <artifactId>craftbukkit</artifactId>
-                </exclusion>
-            </exclusions>
-        </dependency>
-
-        <dependency>
             <groupId>org.bstats</groupId>
-            <artifactId>bstats-bukkit-lite</artifactId>
+            <artifactId>bstats-bukkit</artifactId>
             <version>1.7</version>
             <scope>compile</scope>
         </dependency>
@@ -106,23 +127,6 @@
             <groupId>net.milkbowl.vault</groupId>
             <artifactId>Vault</artifactId>
             <version>1.6.6</version>
-            <scope>provided</scope>
-            <exclusions>
-                <exclusion>
-                    <groupId>org.bukkit</groupId>
-                    <artifactId>bukkit</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>org.bukkit</groupId>
-                    <artifactId>craftbukkit</artifactId>
-                </exclusion>
-            </exclusions>
-        </dependency>
-
-        <dependency>
-            <groupId>info.somethingodd</groupId>
-            <artifactId>odditem</artifactId>
-            <version>0.9.5</version>
             <scope>provided</scope>
             <exclusions>
                 <exclusion>
@@ -292,6 +296,13 @@
         </dependency>
 
         <dependency>
+            <groupId>nl.rutgerkok</groupId>
+            <artifactId>blocklocker</artifactId>
+            <version>1.9</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
             <groupId>com.bekvon.bukkit</groupId>
             <artifactId>residence</artifactId>
             <version>4.6.1.4</version>
@@ -311,7 +322,7 @@
         <dependency>
             <groupId>de.themoep.showitem</groupId>
             <artifactId>api</artifactId>
-            <version>1.2.24</version>
+            <version>1.6.3</version>
             <scope>provided</scope>
         </dependency>
 
@@ -321,14 +332,39 @@
             <version>0.1.0.10</version>
             <scope>provided</scope>
         </dependency>
+
+        <dependency>
+            <groupId>me.crafter.mc</groupId>
+            <artifactId>lockettepro</artifactId>
+            <version>2.10-SNAPSHOT</version>
+            <scope>provided</scope>
+        </dependency>
     </dependencies>
 
     <build>
         <finalName>${project.name}</finalName>
         <plugins>
             <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>3.2.0</version>
+                <configuration>
+                    <forceCreation>true</forceCreation>
+                    <archive>
+                        <manifest>
+                            <addDefaultEntries>true</addDefaultEntries>
+                        </manifest>
+                        <manifestEntries>
+                            <Distribution-Type>${buildType}</Distribution-Type>
+                            <Built-At>${maven.build.timestamp}</Built-At>
+                            <Build-Jdk>${java.runtime.version}</Build-Jdk>
+                        </manifestEntries>
+                    </archive>
+                </configuration>
+            </plugin>
+            <plugin>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.6.1</version>
+                <version>3.8.1</version>
                 <configuration>
                     <source>1.8</source>
                     <target>1.8</target>
@@ -347,7 +383,9 @@
                         <configuration>
                             <artifactSet>
                                 <includes>
-                                    <include>org.mcstats.bukkit</include>
+                                    <include>de.themoep:*</include>
+                                    <include>de.themoep.utils:*</include>
+                                    <include>net.kyori:*</include>
                                     <include>org.bstats:*</include>
                                     <include>net.gravitydevelopment.updater</include>
                                     <include>com.j256.ormlite</include>
@@ -357,8 +395,16 @@
                             </artifactSet>
                             <relocations>
                                 <relocation>
-                                    <pattern>org.mcstats</pattern>
-                                    <shadedPattern>com.Acrobot.ChestShop.Metrics.MCStats</shadedPattern>
+                                    <pattern>de.themoep.utils.lang</pattern>
+                                    <shadedPattern>com.Acrobot.ChestShop.Libs.Lang</shadedPattern>
+                                </relocation>
+                                <relocation>
+                                    <pattern>de.themoep.minedown.adventure</pattern>
+                                    <shadedPattern>com.Acrobot.ChestShop.Libs.MineDown</shadedPattern>
+                                </relocation>
+                                <relocation>
+                                    <pattern>net.kyori</pattern>
+                                    <shadedPattern>com.Acrobot.ChestShop.Libs.Kyori</shadedPattern>
                                 </relocation>
                                 <relocation>
                                     <pattern>org.bstats</pattern>
@@ -370,11 +416,11 @@
                                 </relocation>
                                 <relocation>
                                     <pattern>com.j256.ormlite</pattern>
-                                    <shadedPattern>com.Acrobot.ChestShop.ORMlite</shadedPattern>
+                                    <shadedPattern>com.Acrobot.ChestShop.Libs.ORMlite</shadedPattern>
                                 </relocation>
                                 <relocation>
                                     <pattern>javax.persistence</pattern>
-                                    <shadedPattern>com.Acrobot.ChestShop.javax.persistence</shadedPattern>
+                                    <shadedPattern>com.Acrobot.ChestShop.Libs.javax.persistence</shadedPattern>
                                 </relocation>
                             </relocations>
                         </configuration>
@@ -388,12 +434,20 @@
                 <directory>src/main/resources</directory>
                 <filtering>true</filtering>
             </resource>
+            <resource>
+                <directory>.</directory>
+                <includes>
+                    <include>LICENSE</include>
+                    <include>README.md</include>
+                </includes>
+            </resource>
         </resources>
     </build>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <build.number>${buildNumber}</build.number>
+        <user.name>${buildType}</user.name>
         <bukkit.plugin.version>${project.version} ${buildDescription}</bukkit.plugin.version>
     </properties>
 
@@ -402,7 +456,68 @@
             <id>default</id>
             <activation>
                 <property>
-                    <name>!bukkit</name>
+                    <name>!testprofile</name>
+                </property>
+            </activation>
+            <repositories>
+                <repository>
+                    <id>paper-repo</id>
+                    <url>https://papermc.io/repo/repository/maven-public/</url>
+                </repository>
+            </repositories>
+            <dependencies>
+                <dependency>
+                    <groupId>io.papermc.paper</groupId>
+                    <artifactId>paper-api</artifactId>
+                    <version>1.17-R0.1-SNAPSHOT</version>
+                    <scope>provided</scope>
+                </dependency>
+            </dependencies>
+        </profile>
+
+        <profile>
+            <id>spigot</id>
+            <activation>
+                <property>
+                    <name>testprofile</name>
+                    <value>spigot</value>
+                </property>
+            </activation>
+            <repositories>
+                <repository>
+                    <id>spigotmc-repo</id>
+                    <url>https://hub.spigotmc.org/nexus/content/groups/public</url>
+                </repository>
+            </repositories>
+            <dependencies>
+                <dependency>
+                    <groupId>org.spigotmc</groupId>
+                    <artifactId>spigot-api</artifactId>
+                    <version>1.13.2-R0.1-SNAPSHOT</version>
+                    <scope>provided</scope>
+                </dependency>
+            </dependencies>
+            <build>
+                <finalName>${project.name}-Spigot</finalName>
+                <plugins>
+                    <plugin>
+                        <artifactId>maven-compiler-plugin</artifactId>
+                        <configuration>
+                            <excludes>
+                                <exclude>**/Paper*.java</exclude>
+                            </excludes>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+
+        <profile>
+            <id>backwards</id>
+            <activation>
+                <property>
+                    <name>testprofile</name>
+                    <value>backwards</value>
                 </property>
             </activation>
             <repositories>
@@ -419,35 +534,14 @@
                     <scope>provided</scope>
                 </dependency>
             </dependencies>
-        </profile>
-
-        <profile>
-            <id>bukkit</id>
-            <repositories>
-                <repository>
-                    <id>spigotmc-repo</id>
-                    <url>https://hub.spigotmc.org/nexus/content/groups/public</url>
-                </repository>
-            </repositories>
-            <dependencies>
-                <dependency>
-                    <groupId>org.bukkit</groupId>
-                    <artifactId>bukkit</artifactId>
-                    <version>1.13.2-R0.1-SNAPSHOT</version>
-                    <scope>provided</scope>
-                </dependency>
-            </dependencies>
-            <properties>
-                <bukkit>true</bukkit>
-            </properties>
             <build>
-                <finalName>${project.name}-Bukkit</finalName>
+                <finalName>${project.name}-1.13.2</finalName>
                 <plugins>
                     <plugin>
                         <artifactId>maven-compiler-plugin</artifactId>
                         <configuration>
                             <excludes>
-                                <exclude>**/Paper*.java</exclude>
+                                <exclude>**/PaperLatest*.java</exclude>
                             </excludes>
                         </configuration>
                     </plugin>
@@ -463,6 +557,7 @@
                 </property>
             </activation>
             <properties>
+                <buildType>manual</buildType>
                 <buildNumber>0</buildNumber>
                 <buildDescription>(compiled at ${maven.build.timestamp})</buildDescription>
             </properties>
@@ -476,6 +571,7 @@
                 </property>
             </activation>
             <properties>
+                <buildType>jenkins</buildType>
                 <buildNumber>${env.BUILD_NUMBER}</buildNumber>
                 <buildDescription>(build ${env.BUILD_NUMBER})</buildDescription>
             </properties>

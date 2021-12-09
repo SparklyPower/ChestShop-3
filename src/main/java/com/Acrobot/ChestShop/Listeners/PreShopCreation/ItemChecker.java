@@ -2,11 +2,11 @@ package com.Acrobot.ChestShop.Listeners.PreShopCreation;
 
 import com.Acrobot.Breeze.Utils.MaterialUtil;
 import com.Acrobot.Breeze.Utils.StringUtil;
-import com.Acrobot.ChestShop.Configuration.Messages;
 import com.Acrobot.ChestShop.Configuration.Properties;
 import com.Acrobot.ChestShop.Events.ItemParseEvent;
 import com.Acrobot.ChestShop.Events.PreShopCreationEvent;
 import com.Acrobot.ChestShop.Signs.ChestShopSign;
+import com.Acrobot.ChestShop.Utils.ItemUtil;
 import com.Acrobot.ChestShop.Utils.uBlock;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
@@ -52,7 +52,6 @@ public class ItemChecker implements Listener {
                 if (item == null) {
                     event.setSignLine(ITEM_LINE, ChatColor.BOLD + ChestShopSign.AUTOFILL_CODE);
                     event.setOutcome(ITEM_AUTOFILL);
-                    event.getPlayer().sendMessage(Messages.prefix(Messages.CLICK_TO_AUTOFILL_ITEM));
                     return;
                 }
             } else {
@@ -61,7 +60,7 @@ public class ItemChecker implements Listener {
             }
         }
 
-        itemCode = MaterialUtil.getSignName(item);
+        itemCode = ItemUtil.getSignName(item);
 
         if (StringUtil.getMinecraftStringWidth(itemCode) > MAXIMUM_SIGN_WIDTH) {
             event.setOutcome(INVALID_ITEM);

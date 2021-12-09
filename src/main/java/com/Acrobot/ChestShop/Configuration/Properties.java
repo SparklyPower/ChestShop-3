@@ -43,9 +43,10 @@ public class Properties {
                         if (o instanceof Material) {
                             set.add((Material) o);
                         } else if (o instanceof String) {
-                            try {
-                                set.add(Material.getMaterial(((String) o).toUpperCase(Locale.ROOT)));
-                            } catch (IllegalArgumentException e) {
+                            Material m = Material.getMaterial(((String) o).toUpperCase(Locale.ROOT));
+                            if (m != null) {
+                                set.add(m);
+                            } else {
                                 ChestShop.getBukkitLogger().log(Level.WARNING, o + " is not a valid Material name in the config!");
                             }
                         }
@@ -100,11 +101,24 @@ public class Properties {
 
     @PrecededBySpace
     @ConfigurationComment("Do you want to turn off the automatic updates of ChestShop?")
-    public static boolean TURN_OFF_UPDATES = false;
+    public static boolean TURN_OFF_UPDATES = true;
+
+    @ConfigurationComment("Do you want to turn off the automatic notifications for new development builds?")
+    public static boolean TURN_OFF_DEV_UPDATE_NOTIFIER = false;
+
+    @ConfigurationComment("Do you want to include some values of this config in the metrics? (This will not leak sensitive data but help in the development process)")
+    public static boolean INCLUDE_SETTINGS_IN_METRICS = true;
 
     @PrecededBySpace
     @ConfigurationComment("How large should the internal caches be?")
     public static int CACHE_SIZE = 1000;
+
+    @PrecededBySpace
+    @ConfigurationComment("The default language when the client's language can't be found.")
+    public static String DEFAULT_LANGUAGE = "en";
+
+    @ConfigurationComment("Should the plugin try to use a language file that matches the client's locale setting?")
+    public static boolean USE_CLIENT_LOCALE = true;
 
     @PrecededBySpace
     @ConfigurationComment("What containers are allowed to hold a shop? (Only blocks with inventories work!)")
@@ -118,10 +132,10 @@ public class Properties {
     @ConfigurationComment("(In 1/1000th of a second) How often can a player use the shop sign?")
     public static int SHOP_INTERACTION_INTERVAL = 250;
 
-    @ConfigurationComment("Do you want to allow using shops to people in creative mode?")
+    @ConfigurationComment("Do you want to block people in creative mode from using shops?")
     public static boolean IGNORE_CREATIVE_MODE = true;
 
-    @ConfigurationComment("Do you want to allow using shops to people who have access to it due to their permissions? (owners are always ignored)")
+    @ConfigurationComment("Do you want to block people who have access to a shop due to their permissions from using it? (owners are always ignored)")
     public static boolean IGNORE_ACCESS_PERMS = true;
 
     @ConfigurationComment("If true, people will buy with left-click and sell with right-click.")
@@ -137,7 +151,10 @@ public class Properties {
     public static String SHIFT_ALLOWS = "ALL";
 
     @ConfigurationComment("Can shop's chest be opened by owner with right-clicking a shop's sign?")
-    public static boolean ALLOW_SIGN_CHEST_OPEN = true;
+    public static boolean ALLOW_SIGN_CHEST_OPEN = false;
+
+    @ConfigurationComment("If true and in 1.14+, the owner of a chest shop can click with a dye / ink sac to dye the sign.")
+    public static boolean SIGN_DYING = true;
 
     @ConfigurationComment("If true, when you left-click your own shop sign you won't open chest's inventory, but instead you will start destroying the sign.")
     public static boolean ALLOW_LEFT_CLICK_DESTROYING = true;
@@ -156,6 +173,9 @@ public class Properties {
     @PrecededBySpace
     @ConfigurationComment("First line of your Admin Shop's sign should look like this:")
     public static String ADMIN_SHOP_NAME = "Admin Shop";
+
+    @ConfigurationComment("Make all admin shops be unlimited even if they have a shop container at the sign")
+    public static boolean FORCE_UNLIMITED_ADMIN_SHOP = false;
 
     @ConfigurationComment("The name of the economy account which Admin Shops should use and to which all taxes will go")
     public static String SERVER_ECONOMY_ACCOUNT = "";
@@ -177,6 +197,14 @@ public class Properties {
 
     @ConfigurationComment("How many decimal places are allowed at a maximum for prices?")
     public static int PRICE_PRECISION = 2;
+
+    @ConfigurationComment("This makes sure that the UUIDs of player shop accounts match the server's online-mode setting. Disabling this might lead to issues with offline players and is therefore unsupported!")
+    public static boolean ENSURE_CORRECT_PLAYERID = true;
+
+    @ConfigurationComment("This regexp validates the name of the player. If the name doesn't match, the player will neither be able to create a valid shop sign, nor buy/sell from a shop.\n" +
+            "Note for Bedrock support: If you have Floodgate on your server, you should set this regexp to ^\\\\*?\\\\w+$ and ENSURE_CORRECT_PLAYERID to false\n" +
+            "If your Floodgate prefix is not *, change the first * in the regexp (the one before the question mark) to whatever your prefix is.")
+    public static String VALID_PLAYERNAME_REGEXP = "^\\w+$";
 
     @PrecededBySpace
     @ConfigurationComment("Should we block shops that sell things for more than they buy? (This prevents newbies from creating shops that would be exploited)")
@@ -249,6 +277,9 @@ public class Properties {
     @ConfigurationComment("Do you want to disable the hopper protection, which prevents Hopper-Minecarts from taking items out of shops?")
     public static boolean TURN_OFF_HOPPER_PROTECTION = false;
 
+    @ConfigurationComment("Only allow users to buy/sell that have access to the sign's protection? (E.g. LWC protection)")
+    public static boolean CHECK_ACCESS_FOR_SHOP_USE = false;
+
     @ConfigurationComment("Do you want to protect shop chests with LWC?")
     public static boolean PROTECT_CHEST_WITH_LWC = false;
 
@@ -299,4 +330,8 @@ public class Properties {
     @PrecededBySpace
     @ConfigurationComment("Add icons and make item names hoverable in transaction messages when ShowItem is installed?")
     public static boolean SHOWITEM_MESSAGE = true;
+
+    @PrecededBySpace
+    @ConfigurationComment("Add stock counter to quantity line?")
+    public static boolean USE_STOCK_COUNTER = false;
 }
