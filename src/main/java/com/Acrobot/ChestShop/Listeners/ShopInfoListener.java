@@ -34,7 +34,7 @@ public class ShopInfoListener implements Listener {
     @EventHandler(ignoreCancelled = true)
     public static void showShopInfo(ShopInfoEvent event) {
         if (ChestShopSign.isValid(event.getSign())) {
-            String nameLine = event.getSign().getLine(ChestShopSign.NAME_LINE);
+            String nameLine = ChestShopSign.getNameFromSign(event.getSign());
             int amount;
             try {
                 amount = QuantityUtil.parseQuantity(event.getSign().getLine(ChestShopSign.QUANTITY_LINE));

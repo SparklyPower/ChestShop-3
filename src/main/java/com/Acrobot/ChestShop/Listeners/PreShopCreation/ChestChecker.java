@@ -1,5 +1,6 @@
 package com.Acrobot.ChestShop.Listeners.PreShopCreation;
 
+import com.Acrobot.Breeze.Utils.StringUtil;
 import com.Acrobot.ChestShop.Events.PreShopCreationEvent;
 import com.Acrobot.ChestShop.Permission;
 import com.Acrobot.ChestShop.Security;
@@ -23,7 +24,7 @@ public class ChestChecker implements Listener {
 
     @EventHandler(priority = EventPriority.LOW)
     public static void onPreShopCreation(PreShopCreationEvent event) {
-        String nameLine = event.getSignLine(NAME_LINE);
+        String nameLine = StringUtil.stripColourCodes(event.getSignLine(NAME_LINE));
 
         Container connectedContainer = uBlock.findConnectedContainer(event.getSign().getBlock());
 

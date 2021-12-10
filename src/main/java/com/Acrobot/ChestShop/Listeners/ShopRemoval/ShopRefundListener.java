@@ -10,6 +10,7 @@ import com.Acrobot.ChestShop.Events.Economy.CurrencyAddEvent;
 import com.Acrobot.ChestShop.Events.Economy.CurrencySubtractEvent;
 import com.Acrobot.ChestShop.Events.ShopDestroyedEvent;
 import com.Acrobot.ChestShop.Permission;
+import com.Acrobot.ChestShop.Signs.ChestShopSign;
 import com.Acrobot.ChestShop.UUIDs.NameManager;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
@@ -41,7 +42,7 @@ public class ShopRefundListener implements Listener {
             return;
         }
 
-        AccountQueryEvent accountQueryEvent = new AccountQueryEvent(event.getSign().getLine(NAME_LINE));
+        AccountQueryEvent accountQueryEvent = new AccountQueryEvent(ChestShopSign.getNameFromSign(event.getSign()));
         Bukkit.getPluginManager().callEvent(accountQueryEvent);
         Account account = accountQueryEvent.getAccount();
         if (account == null) {

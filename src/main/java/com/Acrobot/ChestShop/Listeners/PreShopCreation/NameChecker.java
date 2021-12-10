@@ -1,5 +1,6 @@
 package com.Acrobot.ChestShop.Listeners.PreShopCreation;
 
+import com.Acrobot.Breeze.Utils.StringUtil;
 import com.Acrobot.ChestShop.ChestShop;
 import com.Acrobot.ChestShop.Database.Account;
 import com.Acrobot.ChestShop.Events.AccountQueryEvent;
@@ -30,7 +31,7 @@ public class NameChecker implements Listener {
     }
 
     private static void handleEvent(PreShopCreationEvent event) {
-        String name = event.getSignLine(NAME_LINE);
+        String name = StringUtil.stripColourCodes(event.getSignLine(NAME_LINE));
         Player player = event.getPlayer();
 
         Account account = event.getOwnerAccount();

@@ -57,7 +57,7 @@ public class ChestShopSign {
     }
 
     public static boolean isAdminShop(Sign sign) {
-        return isAdminShop(sign.getLine(NAME_LINE));
+        return isAdminShop(getNameFromSign(sign));
     }
 
     public static boolean isValid(Sign sign) {
@@ -151,8 +151,7 @@ public class ChestShopSign {
     }
 
     public static String getNameFromSign(Sign sign) {
-        String[] lines = StringUtil.stripColourCodes(sign.getLines());
-        return lines[NAME_LINE];
+        return StringUtil.stripColourCodes(sign.getLine(NAME_LINE));
     }
 
     public static boolean isValidPreparedSign(String[] lines) {

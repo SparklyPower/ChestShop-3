@@ -1,6 +1,7 @@
 package com.Acrobot.ChestShop.Listeners.Block.Break;
 
 import com.Acrobot.Breeze.Utils.BlockUtil;
+import com.Acrobot.Breeze.Utils.StringUtil;
 import com.Acrobot.ChestShop.ChestShop;
 import com.Acrobot.ChestShop.Configuration.Messages;
 import com.Acrobot.ChestShop.Configuration.Properties;
@@ -145,7 +146,7 @@ public class SignBreak implements Listener {
                 continue;
             }
 
-            if (Properties.TURN_OFF_SIGN_PROTECTION || canDestroyShop(breaker, sign.getLine(NAME_LINE))) {
+            if (Properties.TURN_OFF_SIGN_PROTECTION || canDestroyShop(breaker, ChestShopSign.getNameFromSign(sign))) {
                 brokenBlocks.add(sign);
             } else {
                 canBeBroken = false;

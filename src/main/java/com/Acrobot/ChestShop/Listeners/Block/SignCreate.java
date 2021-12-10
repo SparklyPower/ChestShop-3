@@ -32,7 +32,7 @@ public class SignCreate implements Listener {
 
         Sign sign = (Sign) signBlock.getState();
 
-        if (ChestShopSign.isValid(sign) && !NameManager.canUseName(event.getPlayer(), OTHER_NAME_DESTROY, StringUtil.stripColourCodes(sign.getLine(NAME_LINE)))) {
+        if (ChestShopSign.isValid(sign) && !NameManager.canUseName(event.getPlayer(), OTHER_NAME_DESTROY, ChestShopSign.getNameFromSign(sign))) {
             event.setCancelled(true);
             sign.update();
             return;
