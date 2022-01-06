@@ -8,6 +8,7 @@ import com.Acrobot.ChestShop.Events.ShopCreatedEvent;
 import com.Acrobot.ChestShop.Signs.ChestShopSign;
 import com.Acrobot.ChestShop.UUIDs.NameManager;
 import com.Acrobot.ChestShop.Utils.uBlock;
+import org.bukkit.ChatColor;
 import org.bukkit.block.Block;
 import org.bukkit.block.Sign;
 import org.bukkit.event.EventHandler;
@@ -32,13 +33,20 @@ public class SignCreate implements Listener {
 
         Sign sign = (Sign) signBlock.getState();
 
-        if (ChestShopSign.isValid(sign) && !NameManager.canUseName(event.getPlayer(), OTHER_NAME_DESTROY, ChestShopSign.getNameFromSign(sign))) {
+        // Required due to checks below that we want to strip the color codes
+        String[] strippedColorsLines = event.getLines();
+        for (byte i = 0; i < strippedColorsLines.length && i < 4; ++i) {
+            // Convert to color and then remove
+            strippedColorsLines[i] = StringUtil.stripColourCodes(ChatColor.translateAlternateColorCodes('&', strippedColorsLines[i]));
+        }
+
+        if (ChestShopSign.isValid(strippedColorsLines) && !NameManager.canUseName(event.getPlayer(), OTHER_NAME_DESTROY, strippedColorsLines[NAME_LINE])) {
             event.setCancelled(true);
             sign.update();
             return;
         }
 
-        String[] lines = StringUtil.stripColourCodes(event.getLines());
+        String[] lines = StringUtil.stripColourCodes(strippedColorsLines);
 
         if (!ChestShopSign.isValidPreparedSign(lines)) {
             return;
